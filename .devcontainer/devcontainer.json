@@ -1,0 +1,11 @@
+{
+    "name": "cose312-2025spring",
+    "image": "ghcr.io/sambyeol/ocaml-devcontainer:4.14.1",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ocamllabs.ocaml-platform"
+            ]
+        }
+    }
+}
