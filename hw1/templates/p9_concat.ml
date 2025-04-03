@@ -1,4 +1,6 @@
 exception NotImplemented;;
 
-let concat : 'a list list -> 'a list
-= fun lst -> raise NotImplemented;; (* TODO *)
+let rec concat : 'a list list -> 'a list
+= fun lst -> match lst with
+  | [] -> []
+  | hd::tl -> hd @ (concat tl);;
