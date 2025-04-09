@@ -18,14 +18,14 @@ let testcases : (Regex.t * alphabet list) list =
     (CONCAT (CONCAT (STAR (CONCAT (Alpha A, Alpha A)), STAR (CONCAT (Alpha B, Alpha B))), Alpha B), [A;A;A;B;B;B]); (*false*)
   ]
 
-(* let match_regex : Regex.t -> alphabet list -> bool
-=fun regex input -> Trans.run_dfa (Trans.regex2dfa regex) input *)
+let match_regex : Regex.t -> alphabet list -> bool
+=fun regex input -> Trans.run_dfa (Trans.regex2dfa regex) input
 
 (* run testcases *)
 let _ = 
-  (* List.iter (fun (regex, str) -> 
+  List.iter (fun (regex, str) -> 
     prerr_endline (string_of_bool (match_regex regex str)) 
-  ) testcases *)
-   List.iter (fun (regex, str) -> 
+  ) testcases
+   (* List.iter (fun (regex, str) -> 
     ignore str;
-    ignore (Trans.nfa2dfa (Trans.regex2nfa regex))) testcases
+    ignore (Trans.nfa2dfa (Trans.regex2nfa regex))) testcases *)

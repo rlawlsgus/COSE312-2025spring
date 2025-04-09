@@ -94,39 +94,76 @@ let regex2nfa : Regex.t -> Nfa.t
   let nfa2dfa : Nfa.t -> Dfa.t
   =fun nfa ->
     let rec e_closure (s : Nfa.states) : Nfa.states =
-      let rec aux (visited : Nfa.states) (to_visit : Nfa.states) : Nfa.states =
-        if BatSet.is_empty to_visit then
-          visited
-        else
-          let current = BatSet.choose to_visit in
-          let new_visited = BatSet.add current visited in
-          let new_to_visit = 
-            match BatMap.find_opt current e_delta with
-            | Some next_states -> BatSet.union (BatSet.diff next_states new_visited) (BatSet.remove current to_visit)
-            | None -> BatSet.remove current to_visit
-          in
-          aux new_visited new_to_visit
-      in
-      aux BatSet.empty (BatSet.singleton s) in
-    let edge, eps_edge = Nfa.get_edges nfa in
-    let is_eclosure = e_closure (BatSet.singleton (Nfa.get_initial_state nfa)) in
+      let new_e_closure = BatSet.fold (fun state acc ->
+        let e_states = Nfa.get_next_state_epsilon nfa state in
+        BatSet.union acc e_states) s s in
+      if BatSet.equal new_e_closure s then
+        new_e_closure
+      else
+        e_closure new_e_closure
+    in
+    let dfa = ref( Dfa.create_new_dfa ( e_closure (BatSet.singleton (Nfa.get_initial_state nfa)))) in
+    let visited = ref (BatSet.empty) in
+    let nfa_final = Nfa.get_final_states nfa in
 
-    let dfa = Dfa.create_new_dfa is_eclosure in
-    let e_closure_of_A_states (nfa : Nfa.t) (states : Nfa.states) : Nfa.states =
-      let (_, _, e_delta : Nfa.e_delta, _, _) = nfa in
-      let A_states = BatSet.fold (fun state acc -> BatSet.union (Nfa.get_next_state nfa state Regex.A) acc) states BatSet.empty in
-      e_closure e_delta A_states
-    
-    let dfa = aux dfa (BatSet.singleton (Nfa.get_initial_state nfa)) in
-    Dfa.print dfa;
-    dfa
+    let next_e_closure (s : Nfa.states) (a : Regex.alphabet) : Nfa.states =
+      let new_states = BatSet.fold (fun state acc ->
+        let next_states = Nfa.get_next_state nfa state a in
+        BatSet.union acc (e_closure next_states)) s BatSet.empty in
+      new_states
+    in
+
+    let check_final_state (s : Nfa.states) =
+      let is_final = BatSet.exists (fun state ->
+        BatSet.mem state nfa_final) s in
+      if is_final then
+        dfa := Dfa.add_final_state !dfa s;
+    in
+
+    check_final_state (Dfa.get_initial_state !dfa);
+
+    let rec loop (s : Nfa.states) =
+      let a_states = next_e_closure s Regex.A in
+      let b_states = next_e_closure s Regex.B in
+      if not (BatSet.is_empty (a_states)) then begin
+        if not (BatSet.mem a_states !visited) then begin
+          visited := BatSet.add a_states !visited;
+          dfa := Dfa.add_state !dfa a_states;
+          check_final_state a_states;
+          loop a_states;
+        end;
+        dfa := Dfa.add_edge !dfa (s, Regex.A, a_states);
+      end;
+      if not (BatSet.is_empty (b_states)) then begin
+        if not (BatSet.mem b_states !visited) then begin
+          visited := BatSet.add b_states !visited;
+          dfa := Dfa.add_state !dfa b_states;
+          check_final_state b_states;
+          loop b_states;
+        end;
+        dfa := Dfa.add_edge !dfa (s, Regex.B, b_states);
+      end;
+    in
+    loop (Dfa.get_initial_state !dfa);
+    (* Dfa.print !dfa; *)
+    !dfa
  
 (* Do not modify this function *)
-(* let regex2dfa : Regex.t -> Dfa.t
+let regex2dfa : Regex.t -> Dfa.t
 =fun regex -> 
   let nfa = regex2nfa regex in
   let dfa = nfa2dfa nfa in
     dfa
 
 let run_dfa : Dfa.t -> alphabet list -> bool
-=fun _ _ -> raise Not_implemented TODO *)
+=fun dfa al -> 
+  let rec loop (s : Dfa.state) al = 
+    match al with
+    | [] -> Dfa.is_final_state dfa s
+    | a::rest -> 
+      (try 
+       let next_s = Dfa.get_next_state dfa s a in
+       loop next_s rest
+       with Failure _ -> false)
+    in
+    loop (Dfa.get_initial_state dfa) al
