@@ -58,14 +58,11 @@ no error detected
 The number of instructions executed : 7
 == optimized T ==
 0 : x = 0
-0 : .t1 = 0
-0 : x = .t1
-0 : .t3 = x
 0 : .t4 = 1
-0 : .t2 = .t3 + .t4
+0 : .t2 = x + .t4
 0 : write .t2
 0 : HALT
 == executing T ==
 1
-The number of instructions executed : 7
+The number of instructions executed : 4
 ```
