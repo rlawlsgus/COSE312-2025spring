@@ -66,3 +66,8 @@ The number of instructions executed : 7
 1
 The number of instructions executed : 4
 ```
+You can visualize the cfg as follows:
+```
+dot -Tpng cfg.dot > cfg.png
+open cfg.png 
+```
