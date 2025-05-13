@@ -35,70 +35,71 @@ let rec translate_exp : S.exp -> (T.linstr list * T.var)
       let id' = new_temp() in
       ([(0, T.COPY (id', id))], id')
     | LV ARR (id, e) ->
+      let t = new_temp() in
       let (sub_instr, e') = translate_exp e in
-      (sub_instr @ [(0, T.LOAD (new_temp(), (id, e')))], e')
+      (sub_instr @ [(0, T.LOAD (t, (id, e')))], t)
     | ADD (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.ADD, e1', e2'))], t)
     | SUB (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.SUB, e1', e2'))], t)
     | MUL (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.MUL, e1', e2'))], t)
     | DIV (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.DIV, e1', e2'))], t)
     | MINUS e ->
-      let (sub_instr, e') = translate_exp e in
       let t = new_temp() in
+      let (sub_instr, e') = translate_exp e in
       (sub_instr @ [(0, T.ASSIGNU (t, T.MINUS, e'))], t)
     | NOT e ->
-      let (sub_instr, e') = translate_exp e in
       let t = new_temp() in
+      let (sub_instr, e') = translate_exp e in
       (sub_instr @ [(0, T.ASSIGNU (t, T.NOT, e'))], t)
     | LT (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.LT, e1', e2'))], t)
     | LE (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.LE, e1', e2'))], t)
     | GT (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.GT, e1', e2'))], t)
     | GE (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.GE, e1', e2'))], t)
     | EQ (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.EQ, e1', e2'))], t)
     | AND (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.AND, e1', e2'))], t)
     | OR (e1, e2) ->
+      let t = new_temp() in
       let (sub_instr1, e1') = translate_exp e1 in
       let (sub_instr2, e2') = translate_exp e2 in
-      let t = new_temp() in
       (sub_instr1 @ sub_instr2 @ [(0, T.ASSIGNV (t, T.OR, e1', e2'))], t)
 
 let rec translate_block : S.block -> T.linstr list
