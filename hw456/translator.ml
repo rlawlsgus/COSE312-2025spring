@@ -146,7 +146,7 @@ let rec translate_block : S.block -> T.linstr list
 
 let s2t : S.program -> T.program
 =fun s -> 
-  let pgm = (translate_block s) in
+  let pgm = (translate_block s) @ [(0, T.HALT)] in
   pgm
 
 (*************************************)
