@@ -152,6 +152,132 @@ let s2t : S.program -> T.program
 (*************************************)
 (*     translation from S to Cfg     *)
 (*************************************)
+let rec create_cfg_decls : (Cfg.t * S.decls * Node.t option) -> (Cfg.t * Node.t option)
+  =fun (cfg, decls, prev_node_opt) ->
+    match decls with
+    | [] -> (cfg, prev_node_opt)
+    | (S.TINT, x)::rest ->
+      let node = Node.create_assign (S.ID x) (S.NUM 0) in
+      let cfg = Cfg.add_node node cfg in
+      let cfg =
+        match prev_node_opt with
+        | Some prev_node -> Cfg.add_edge prev_node node cfg
+        | None -> cfg
+      in
+      create_cfg_decls (cfg, rest, prev_node_opt)
+    | (S.TARR n, x)::rest -> 
+      let node = Node.create_alloc x n in
+      let cfg = Cfg.add_node node cfg in
+      let cfg =
+        match prev_node_opt with
+        | Some prev_node -> Cfg.add_edge prev_node node cfg
+        | None -> cfg
+      in
+      create_cfg_decls (cfg, rest, Some node)
+
+let rec create_cfg : (Cfg.t * S.block * Node.t option) -> (Cfg.t * Node.t option)
+  =fun (cfg, s, prev_node_opt) ->
+    let rec create_cfg_stmt : (Cfg.t * S.stmt * Node.t option) -> (Cfg.t * Node.t option)
+      =fun (cfg, s, prev_node_opt) ->
+        match s with
+        | S.ASSIGN (lv, e) -> 
+          let node = Node.create_assign lv e in
+          let cfg = Cfg.add_node node cfg in
+          let cfg =
+            match prev_node_opt with
+            | Some prev_node -> Cfg.add_edge prev_node node cfg
+            | None -> cfg
+          in
+          (cfg, Some node)
+        | S.IF (b, s1, s2) ->
+          let node = Node.create_assume b in
+          let cfg = Cfg.add_node node cfg in
+          let cfg =
+            match prev_node_opt with
+            | Some prev_node -> Cfg.add_edge prev_node node cfg
+            | None -> cfg
+          in
+          let (cfg, _) = create_cfg_stmt (cfg, s1, Some node) in
+          let (cfg, _) = create_cfg_stmt (cfg, s2, Some node) in
+          let skip_node = Node.create_skip () in
+          let cfg = Cfg.add_node skip_node cfg in
+          let cfg = Cfg.add_edge node skip_node cfg in
+          (cfg, Some skip_node)
+        | S.WHILE (b, s) ->
+          let assume_node = Node.create_assume b in
+          let cfg = Cfg.add_node assume_node cfg in
+          let cfg =
+            match prev_node_opt with
+            | Some prev_node -> Cfg.add_edge prev_node assume_node cfg
+            | None -> cfg
+          in
+          let (cfg, _) = create_cfg_stmt (cfg, s, Some assume_node) in
+          let skip_node = Node.create_skip () in
+          let cfg = Cfg.add_node skip_node cfg in
+          let cfg = Cfg.add_edge skip_node assume_node cfg in
+          let cfg = Cfg.add_edge assume_node skip_node cfg in
+          (cfg, Some skip_node)
+        | S.DOWHILE (s, b) ->
+          let (cfg, last_node_opt) = create_cfg_stmt (cfg, s, prev_node_opt) in
+          let assume_node = Node.create_assume b in
+          let cfg = Cfg.add_node assume_node cfg in
+          let cfg =
+            match last_node_opt with
+            | Some last_node -> Cfg.add_edge last_node assume_node cfg
+            | None -> cfg
+          in
+          (cfg, Some assume_node)
+        | S.READ x ->
+          let node = Node.create_read x in
+          let cfg = Cfg.add_node node cfg in
+          let cfg =
+            match prev_node_opt with
+            | Some prev_node -> Cfg.add_edge prev_node node cfg
+            | None -> cfg
+          in
+          (cfg, Some node)
+        | S.PRINT e ->
+          let node = Node.create_print e in
+          let cfg = Cfg.add_node node cfg in
+          let cfg =
+            match prev_node_opt with
+            | Some prev_node -> Cfg.add_edge prev_node node cfg
+            | None -> cfg
+          in
+          (cfg, Some node)
+        | S.BLOCK b ->
+          let cfg, node = create_cfg (cfg, b, prev_node_opt) in
+          match node with
+          | Some node' ->
+            (cfg, Some node')
+          | None ->
+            (cfg, prev_node_opt)
+    in
+    let rec create_cfg_stmts : (Cfg.t * S.stmts * Node.t option) -> (Cfg.t * Node.t option)
+      =fun (cfg, stmts, prev_node_opt) ->
+        match stmts with
+        | [] -> (cfg, prev_node_opt)
+        | s::rest -> 
+          let (cfg, last_node_opt) = create_cfg_stmt (cfg, s, prev_node_opt) in
+          create_cfg_stmts (cfg, rest, last_node_opt)
+    in
+    match s with
+    | (decls, stmts) ->
+      let (cfg, node) = create_cfg_decls (cfg, decls, prev_node_opt) in
+      let (cfg, lnode) = create_cfg_stmts (cfg, stmts, node) in
+      (cfg, lnode)
 
 let s2cfg : S.program -> Cfg.t 
-=fun s -> ignore s; raise Not_implemented
+  =fun s ->
+    let cfg = Cfg.empty in
+    let entry_node = Node.create_skip () in
+    let last_node = Node.create_skip () in
+    let cfg = Cfg.add_node entry_node cfg in
+    let cfg, lnode = create_cfg (cfg, s, Some entry_node) in
+    let cfg = Cfg.add_node last_node cfg in
+    let cfg =
+      match lnode with
+      | Some lnode' -> Cfg.add_edge lnode' last_node cfg
+      | None -> cfg
+    in
+    cfg
