@@ -1,0 +1,38 @@
+== S ==
+{
+ int x;
+ x = 0;
+ print x + 1;
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : .t4 = 0
+0 : x = .t4
+0 : .t2 = x
+0 : .t3 = 1
+0 : .t1 = .t2 + .t3
+0 : write .t1
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+1
+== executing CFG ==
+1
+== executing T ==
+1
+The number of instructions executed : 7
+== optimized T ==
+0 : x = 0
+0 : .t4 = 0
+0 : x = .t4
+0 : .t2 = x
+0 : .t3 = 1
+0 : .t1 = .t2 + .t3
+0 : write .t1
+0 : HALT
+== executing T ==
+1
+The number of instructions executed : 7

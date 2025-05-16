@@ -1,0 +1,47 @@
+== S ==
+{
+ int a;
+ int b;
+ int c;
+ int d;
+ int e;
+ int[10] arr1;
+ int[20] arr2;
+ int[5] arr3;
+ int[15] arr4;
+ int[7] arr5;
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : a = 0
+0 : b = 0
+0 : c = 0
+0 : d = 0
+0 : e = 0
+0 : arr1 = alloc (10)
+0 : arr2 = alloc (20)
+0 : arr3 = alloc (5)
+0 : arr4 = alloc (15)
+0 : arr5 = alloc (7)
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+== executing CFG ==
+== executing T ==
+The number of instructions executed : 10
+== optimized T ==
+0 : a = 0
+0 : b = 0
+0 : c = 0
+0 : d = 0
+0 : e = 0
+0 : arr1 = alloc (10)
+0 : arr2 = alloc (20)
+0 : arr3 = alloc (5)
+0 : arr4 = alloc (15)
+0 : arr5 = alloc (7)
+0 : HALT
+== executing T ==
+The number of instructions executed : 10

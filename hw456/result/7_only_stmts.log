@@ -1,0 +1,174 @@
+== S ==
+{
+ print 10;
+ print 20;
+ print 30;
+ print 10 + 20;
+ print 30 - 10;
+ print 5 * 4;
+ print 20 / 5;
+ if 10 > 5  {
+  print 100;
+ }
+else  {
+  print 200;
+ }
+
+ if 10 < 5  {
+  print 300;
+ }
+else  {
+  print 400;
+ }
+
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : .t25 = 10
+0 : write .t25
+0 : .t24 = 20
+0 : write .t24
+0 : .t23 = 30
+0 : write .t23
+0 : .t21 = 10
+0 : .t22 = 20
+0 : .t20 = .t21 + .t22
+0 : write .t20
+0 : .t18 = 30
+0 : .t19 = 10
+0 : .t17 = .t18 - .t19
+0 : write .t17
+0 : .t15 = 5
+0 : .t16 = 4
+0 : .t14 = .t15 * .t16
+0 : write .t14
+0 : .t12 = 20
+0 : .t13 = 5
+0 : .t11 = .t12 / .t13
+0 : write .t11
+0 : .t7 = 10
+0 : .t8 = 5
+0 : .t6 = .t7 > .t8
+0 : if .t6 goto 5
+0 : goto 6
+5 : SKIP
+0 : .t10 = 100
+0 : write .t10
+0 : goto 7
+6 : SKIP
+0 : .t9 = 200
+0 : write .t9
+0 : goto 7
+7 : SKIP
+0 : .t2 = 10
+0 : .t3 = 5
+0 : .t1 = .t2 < .t3
+0 : if .t1 goto 2
+0 : goto 3
+2 : SKIP
+0 : .t5 = 300
+0 : write .t5
+0 : goto 4
+3 : SKIP
+0 : .t4 = 400
+0 : write .t4
+0 : goto 4
+4 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+10
+20
+30
+30
+20
+20
+4
+100
+400
+== executing CFG ==
+10
+20
+30
+30
+20
+20
+4
+100
+400
+== executing T ==
+10
+20
+30
+30
+20
+20
+4
+100
+400
+The number of instructions executed : 41
+== optimized T ==
+0 : .t25 = 10
+0 : write .t25
+0 : .t24 = 20
+0 : write .t24
+0 : .t23 = 30
+0 : write .t23
+0 : .t21 = 10
+0 : .t22 = 20
+0 : .t20 = .t21 + .t22
+0 : write .t20
+0 : .t18 = 30
+0 : .t19 = 10
+0 : .t17 = .t18 - .t19
+0 : write .t17
+0 : .t15 = 5
+0 : .t16 = 4
+0 : .t14 = .t15 * .t16
+0 : write .t14
+0 : .t12 = 20
+0 : .t13 = 5
+0 : .t11 = .t12 / .t13
+0 : write .t11
+0 : .t7 = 10
+0 : .t8 = 5
+0 : .t6 = .t7 > .t8
+0 : if .t6 goto 5
+0 : goto 6
+5 : SKIP
+0 : .t10 = 100
+0 : write .t10
+0 : goto 7
+6 : SKIP
+0 : .t9 = 200
+0 : write .t9
+0 : goto 7
+7 : SKIP
+0 : .t2 = 10
+0 : .t3 = 5
+0 : .t1 = .t2 < .t3
+0 : if .t1 goto 2
+0 : goto 3
+2 : SKIP
+0 : .t5 = 300
+0 : write .t5
+0 : goto 4
+3 : SKIP
+0 : .t4 = 400
+0 : write .t4
+0 : goto 4
+4 : SKIP
+0 : HALT
+== executing T ==
+10
+20
+30
+30
+20
+20
+4
+100
+400
+The number of instructions executed : 41

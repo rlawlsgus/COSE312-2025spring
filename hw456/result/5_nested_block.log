@@ -1,0 +1,137 @@
+== S ==
+{
+ int x;
+ int y;
+ x = 10;
+ y = 20;
+ print x + y;
+  {
+  int z;
+  z = x * y;
+  print z;
+    {
+   int w;
+   w = z - x;
+   print w;
+      {
+    x = w + y;
+    print x;
+   }
+
+  }
+
+  print x;
+ }
+
+ print x + y;
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : y = 0
+0 : .t21 = 10
+0 : x = .t21
+0 : .t20 = 20
+0 : y = .t20
+0 : .t18 = x
+0 : .t19 = y
+0 : .t17 = .t18 + .t19
+0 : write .t17
+0 : z = 0
+0 : .t15 = x
+0 : .t16 = y
+0 : .t14 = .t15 * .t16
+0 : z = .t14
+0 : .t13 = z
+0 : write .t13
+0 : w = 0
+0 : .t11 = z
+0 : .t12 = x
+0 : .t10 = .t11 - .t12
+0 : w = .t10
+0 : .t9 = w
+0 : write .t9
+0 : .t7 = w
+0 : .t8 = y
+0 : .t6 = .t7 + .t8
+0 : x = .t6
+0 : .t5 = x
+0 : write .t5
+0 : .t4 = x
+0 : write .t4
+0 : .t2 = x
+0 : .t3 = y
+0 : .t1 = .t2 + .t3
+0 : write .t1
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+30
+200
+190
+210
+210
+230
+== executing CFG ==
+30
+200
+190
+210
+210
+230
+== executing T ==
+30
+200
+190
+210
+210
+230
+The number of instructions executed : 36
+== optimized T ==
+0 : x = 0
+0 : y = 0
+0 : .t21 = 10
+0 : x = .t21
+0 : .t20 = 20
+0 : y = .t20
+0 : .t18 = x
+0 : .t19 = y
+0 : .t17 = .t18 + .t19
+0 : write .t17
+0 : z = 0
+0 : .t15 = x
+0 : .t16 = y
+0 : .t14 = .t15 * .t16
+0 : z = .t14
+0 : .t13 = z
+0 : write .t13
+0 : w = 0
+0 : .t11 = z
+0 : .t12 = x
+0 : .t10 = .t11 - .t12
+0 : w = .t10
+0 : .t9 = w
+0 : write .t9
+0 : .t7 = w
+0 : .t8 = y
+0 : .t6 = .t7 + .t8
+0 : x = .t6
+0 : .t5 = x
+0 : write .t5
+0 : .t4 = x
+0 : write .t4
+0 : .t2 = x
+0 : .t3 = y
+0 : .t1 = .t2 + .t3
+0 : write .t1
+0 : HALT
+== executing T ==
+30
+200
+190
+210
+210
+230
+The number of instructions executed : 36

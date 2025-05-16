@@ -1,0 +1,104 @@
+== S ==
+{
+ int x;
+ int y;
+ x = 0;
+ y = 0;
+ while x < 10  {
+  x = x + 1;
+  print x;
+ }
+
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : y = 0
+0 : .t9 = 0
+0 : x = .t9
+0 : .t8 = 0
+0 : y = .t8
+2 : SKIP
+0 : .t2 = x
+0 : .t3 = 10
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t6 = x
+0 : .t7 = 1
+0 : .t5 = .t6 + .t7
+0 : x = .t5
+0 : .t4 = x
+0 : write .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+== executing CFG ==
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+== executing T ==
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+The number of instructions executed : 132
+== optimized T ==
+0 : x = 0
+0 : y = 0
+0 : .t9 = 0
+0 : x = .t9
+0 : .t8 = 0
+0 : y = .t8
+2 : SKIP
+0 : .t2 = x
+0 : .t3 = 10
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t6 = x
+0 : .t7 = 1
+0 : .t5 = .t6 + .t7
+0 : x = .t5
+0 : .t4 = x
+0 : write .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== executing T ==
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+The number of instructions executed : 132

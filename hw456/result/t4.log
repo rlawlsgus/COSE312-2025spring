@@ -1,0 +1,36 @@
+== S ==
+{
+ int x;
+ read x;
+ if x == 1 || x == 2 print x;else print x + 1;
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : read x
+0 : .t3 = x
+0 : .t4 = 1
+0 : .t2 = .t3 == .t4
+0 : .t6 = x
+0 : .t7 = 2
+0 : .t5 = .t6 == .t7
+0 : .t1 = .t2 || .t5
+0 : if .t1 goto 2
+0 : goto 3
+2 : SKIP
+0 : .t11 = x
+0 : write .t11
+0 : goto 4
+3 : SKIP
+0 : .t9 = x
+0 : .t10 = 1
+0 : .t8 = .t9 + .t10
+0 : write .t8
+0 : goto 4
+4 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+⏰ Timeout occurred

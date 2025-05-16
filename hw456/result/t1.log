@@ -1,0 +1,66 @@
+== S ==
+{
+ int x;
+ x = -1;
+ if !(x)  {
+  print -1;
+ }
+else  {
+  print 2;
+ }
+
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : .t7 = 1
+0 : .t6 = -.t7
+0 : x = .t6
+0 : .t2 = x
+0 : .t1 = !.t2
+0 : if .t1 goto 2
+0 : goto 3
+2 : SKIP
+0 : .t5 = 1
+0 : .t4 = -.t5
+0 : write .t4
+0 : goto 4
+3 : SKIP
+0 : .t3 = 2
+0 : write .t3
+0 : goto 4
+4 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+2
+== executing CFG ==
+2
+== executing T ==
+2
+The number of instructions executed : 13
+== optimized T ==
+0 : x = 0
+0 : .t7 = 1
+0 : .t6 = -.t7
+0 : x = .t6
+0 : .t2 = x
+0 : .t1 = !.t2
+0 : if .t1 goto 2
+0 : goto 3
+2 : SKIP
+0 : .t5 = 1
+0 : .t4 = -.t5
+0 : write .t4
+0 : goto 4
+3 : SKIP
+0 : .t3 = 2
+0 : write .t3
+0 : goto 4
+4 : SKIP
+0 : HALT
+== executing T ==
+2
+The number of instructions executed : 13

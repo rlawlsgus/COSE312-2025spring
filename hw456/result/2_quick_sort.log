@@ -1,0 +1,543 @@
+== S ==
+{
+ int n;
+ int i;
+ int pivot;
+ int temp;
+ int low;
+ int high;
+ int[100] arr;
+ int input;
+ int[100] stack;
+ int top;
+ int left;
+ int right;
+ int p;
+ read n;
+ i = 0;
+ while i < n  {
+  read input;
+  arr[i] = input;
+  i = i + 1;
+ }
+
+ top = -1;
+ top = top + 1;
+ stack[top] = 0;
+ top = top + 1;
+ stack[top] = n - 1;
+ while top >= 0  {
+  high = stack[top];
+  top = top - 1;
+  low = stack[top];
+  top = top - 1;
+  pivot = arr[high];
+  i = low - 1;
+  left = low;
+  while left < high    {
+   if arr[left] <= pivot      {
+    i = i + 1;
+    temp = arr[i];
+    arr[i] = arr[left];
+    arr[left] = temp;
+   }
+else      {
+   }
+
+   left = left + 1;
+  }
+
+  i = i + 1;
+  temp = arr[i];
+  arr[i] = arr[high];
+  arr[high] = temp;
+  p = i;
+  if p - 1 > low    {
+   top = top + 1;
+   stack[top] = low;
+   top = top + 1;
+   stack[top] = p - 1;
+  }
+else    {
+  }
+
+  if p + 1 < high    {
+   top = top + 1;
+   stack[top] = p + 1;
+   top = top + 1;
+   stack[top] = high;
+  }
+else    {
+  }
+
+ }
+
+ i = 0;
+ while i < n  {
+  print arr[i];
+  i = i + 1;
+ }
+
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : n = 0
+0 : i = 0
+0 : pivot = 0
+0 : temp = 0
+0 : low = 0
+0 : high = 0
+0 : arr = alloc (100)
+0 : input = 0
+0 : stack = alloc (100)
+0 : top = 0
+0 : left = 0
+0 : right = 0
+0 : p = 0
+0 : read n
+0 : .t116 = 0
+0 : i = .t116
+17 : SKIP
+0 : .t109 = i
+0 : .t110 = n
+0 : .t108 = .t109 < .t110
+0 : iffalse .t108 goto 18
+0 : read input
+0 : .t114 = i
+0 : .t115 = input
+0 : arr[.t114] = .t115
+0 : .t112 = i
+0 : .t113 = 1
+0 : .t111 = .t112 + .t113
+0 : i = .t111
+0 : goto 17
+18 : SKIP
+0 : .t107 = 1
+0 : .t106 = -.t107
+0 : top = .t106
+0 : .t104 = top
+0 : .t105 = 1
+0 : .t103 = .t104 + .t105
+0 : top = .t103
+0 : .t101 = top
+0 : .t102 = 0
+0 : stack[.t101] = .t102
+0 : .t99 = top
+0 : .t100 = 1
+0 : .t98 = .t99 + .t100
+0 : top = .t98
+0 : .t94 = top
+0 : .t96 = n
+0 : .t97 = 1
+0 : .t95 = .t96 - .t97
+0 : stack[.t94] = .t95
+4 : SKIP
+0 : .t11 = top
+0 : .t12 = 0
+0 : .t10 = .t11 >= .t12
+0 : iffalse .t10 goto 5
+0 : .t93 = top
+0 : .t92 = stack[.t93]
+0 : high = .t92
+0 : .t90 = top
+0 : .t91 = 1
+0 : .t89 = .t90 - .t91
+0 : top = .t89
+0 : .t88 = top
+0 : .t87 = stack[.t88]
+0 : low = .t87
+0 : .t85 = top
+0 : .t86 = 1
+0 : .t84 = .t85 - .t86
+0 : top = .t84
+0 : .t83 = high
+0 : .t82 = arr[.t83]
+0 : pivot = .t82
+0 : .t80 = low
+0 : .t81 = 1
+0 : .t79 = .t80 - .t81
+0 : i = .t79
+0 : .t78 = low
+0 : left = .t78
+12 : SKIP
+0 : .t59 = left
+0 : .t60 = high
+0 : .t58 = .t59 < .t60
+0 : iffalse .t58 goto 13
+0 : .t66 = left
+0 : .t65 = arr[.t66]
+0 : .t67 = pivot
+0 : .t64 = .t65 <= .t67
+0 : if .t64 goto 14
+0 : goto 15
+14 : SKIP
+0 : .t76 = i
+0 : .t77 = 1
+0 : .t75 = .t76 + .t77
+0 : i = .t75
+0 : .t74 = i
+0 : .t73 = arr[.t74]
+0 : temp = .t73
+0 : .t70 = i
+0 : .t72 = left
+0 : .t71 = arr[.t72]
+0 : arr[.t70] = .t71
+0 : .t68 = left
+0 : .t69 = temp
+0 : arr[.t68] = .t69
+0 : goto 16
+15 : SKIP
+0 : goto 16
+16 : SKIP
+0 : .t62 = left
+0 : .t63 = 1
+0 : .t61 = .t62 + .t63
+0 : left = .t61
+0 : goto 12
+13 : SKIP
+0 : .t56 = i
+0 : .t57 = 1
+0 : .t55 = .t56 + .t57
+0 : i = .t55
+0 : .t54 = i
+0 : .t53 = arr[.t54]
+0 : temp = .t53
+0 : .t50 = i
+0 : .t52 = high
+0 : .t51 = arr[.t52]
+0 : arr[.t50] = .t51
+0 : .t48 = high
+0 : .t49 = temp
+0 : arr[.t48] = .t49
+0 : .t47 = i
+0 : p = .t47
+0 : .t32 = p
+0 : .t33 = 1
+0 : .t31 = .t32 - .t33
+0 : .t34 = low
+0 : .t30 = .t31 > .t34
+0 : if .t30 goto 9
+0 : goto 10
+9 : SKIP
+0 : .t45 = top
+0 : .t46 = 1
+0 : .t44 = .t45 + .t46
+0 : top = .t44
+0 : .t42 = top
+0 : .t43 = low
+0 : stack[.t42] = .t43
+0 : .t40 = top
+0 : .t41 = 1
+0 : .t39 = .t40 + .t41
+0 : top = .t39
+0 : .t35 = top
+0 : .t37 = p
+0 : .t38 = 1
+0 : .t36 = .t37 - .t38
+0 : stack[.t35] = .t36
+0 : goto 11
+10 : SKIP
+0 : goto 11
+11 : SKIP
+0 : .t15 = p
+0 : .t16 = 1
+0 : .t14 = .t15 + .t16
+0 : .t17 = high
+0 : .t13 = .t14 < .t17
+0 : if .t13 goto 6
+0 : goto 7
+6 : SKIP
+0 : .t28 = top
+0 : .t29 = 1
+0 : .t27 = .t28 + .t29
+0 : top = .t27
+0 : .t23 = top
+0 : .t25 = p
+0 : .t26 = 1
+0 : .t24 = .t25 + .t26
+0 : stack[.t23] = .t24
+0 : .t21 = top
+0 : .t22 = 1
+0 : .t20 = .t21 + .t22
+0 : top = .t20
+0 : .t18 = top
+0 : .t19 = high
+0 : stack[.t18] = .t19
+0 : goto 8
+7 : SKIP
+0 : goto 8
+8 : SKIP
+0 : goto 4
+5 : SKIP
+0 : .t9 = 0
+0 : i = .t9
+2 : SKIP
+0 : .t2 = i
+0 : .t3 = n
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t8 = i
+0 : .t7 = arr[.t8]
+0 : write .t7
+0 : .t5 = i
+0 : .t6 = 1
+0 : .t4 = .t5 + .t6
+0 : i = .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+2
+3
+5
+6
+7
+9
+10
+11
+12
+14
+== executing CFG ==
+2
+3
+5
+6
+7
+9
+10
+11
+12
+14
+== executing T ==
+2
+3
+5
+6
+7
+9
+10
+11
+12
+14
+The number of instructions executed : 1336
+== optimized T ==
+0 : n = 0
+0 : i = 0
+0 : pivot = 0
+0 : temp = 0
+0 : low = 0
+0 : high = 0
+0 : arr = alloc (100)
+0 : input = 0
+0 : stack = alloc (100)
+0 : top = 0
+0 : left = 0
+0 : right = 0
+0 : p = 0
+0 : read n
+0 : .t116 = 0
+0 : i = .t116
+17 : SKIP
+0 : .t109 = i
+0 : .t110 = n
+0 : .t108 = .t109 < .t110
+0 : iffalse .t108 goto 18
+0 : read input
+0 : .t114 = i
+0 : .t115 = input
+0 : arr[.t114] = .t115
+0 : .t112 = i
+0 : .t113 = 1
+0 : .t111 = .t112 + .t113
+0 : i = .t111
+0 : goto 17
+18 : SKIP
+0 : .t107 = 1
+0 : .t106 = -.t107
+0 : top = .t106
+0 : .t104 = top
+0 : .t105 = 1
+0 : .t103 = .t104 + .t105
+0 : top = .t103
+0 : .t101 = top
+0 : .t102 = 0
+0 : stack[.t101] = .t102
+0 : .t99 = top
+0 : .t100 = 1
+0 : .t98 = .t99 + .t100
+0 : top = .t98
+0 : .t94 = top
+0 : .t96 = n
+0 : .t97 = 1
+0 : .t95 = .t96 - .t97
+0 : stack[.t94] = .t95
+4 : SKIP
+0 : .t11 = top
+0 : .t12 = 0
+0 : .t10 = .t11 >= .t12
+0 : iffalse .t10 goto 5
+0 : .t93 = top
+0 : .t92 = stack[.t93]
+0 : high = .t92
+0 : .t90 = top
+0 : .t91 = 1
+0 : .t89 = .t90 - .t91
+0 : top = .t89
+0 : .t88 = top
+0 : .t87 = stack[.t88]
+0 : low = .t87
+0 : .t85 = top
+0 : .t86 = 1
+0 : .t84 = .t85 - .t86
+0 : top = .t84
+0 : .t83 = high
+0 : .t82 = arr[.t83]
+0 : pivot = .t82
+0 : .t80 = low
+0 : .t81 = 1
+0 : .t79 = .t80 - .t81
+0 : i = .t79
+0 : .t78 = low
+0 : left = .t78
+12 : SKIP
+0 : .t59 = left
+0 : .t60 = high
+0 : .t58 = .t59 < .t60
+0 : iffalse .t58 goto 13
+0 : .t66 = left
+0 : .t65 = arr[.t66]
+0 : .t67 = pivot
+0 : .t64 = .t65 <= .t67
+0 : if .t64 goto 14
+0 : goto 15
+14 : SKIP
+0 : .t76 = i
+0 : .t77 = 1
+0 : .t75 = .t76 + .t77
+0 : i = .t75
+0 : .t74 = i
+0 : .t73 = arr[.t74]
+0 : temp = .t73
+0 : .t70 = i
+0 : .t72 = left
+0 : .t71 = arr[.t72]
+0 : arr[.t70] = .t71
+0 : .t68 = left
+0 : .t69 = temp
+0 : arr[.t68] = .t69
+0 : goto 16
+15 : SKIP
+0 : goto 16
+16 : SKIP
+0 : .t62 = left
+0 : .t63 = 1
+0 : .t61 = .t62 + .t63
+0 : left = .t61
+0 : goto 12
+13 : SKIP
+0 : .t56 = i
+0 : .t57 = 1
+0 : .t55 = .t56 + .t57
+0 : i = .t55
+0 : .t54 = i
+0 : .t53 = arr[.t54]
+0 : temp = .t53
+0 : .t50 = i
+0 : .t52 = high
+0 : .t51 = arr[.t52]
+0 : arr[.t50] = .t51
+0 : .t48 = high
+0 : .t49 = temp
+0 : arr[.t48] = .t49
+0 : .t47 = i
+0 : p = .t47
+0 : .t32 = p
+0 : .t33 = 1
+0 : .t31 = .t32 - .t33
+0 : .t34 = low
+0 : .t30 = .t31 > .t34
+0 : if .t30 goto 9
+0 : goto 10
+9 : SKIP
+0 : .t45 = top
+0 : .t46 = 1
+0 : .t44 = .t45 + .t46
+0 : top = .t44
+0 : .t42 = top
+0 : .t43 = low
+0 : stack[.t42] = .t43
+0 : .t40 = top
+0 : .t41 = 1
+0 : .t39 = .t40 + .t41
+0 : top = .t39
+0 : .t35 = top
+0 : .t37 = p
+0 : .t38 = 1
+0 : .t36 = .t37 - .t38
+0 : stack[.t35] = .t36
+0 : goto 11
+10 : SKIP
+0 : goto 11
+11 : SKIP
+0 : .t15 = p
+0 : .t16 = 1
+0 : .t14 = .t15 + .t16
+0 : .t17 = high
+0 : .t13 = .t14 < .t17
+0 : if .t13 goto 6
+0 : goto 7
+6 : SKIP
+0 : .t28 = top
+0 : .t29 = 1
+0 : .t27 = .t28 + .t29
+0 : top = .t27
+0 : .t23 = top
+0 : .t25 = p
+0 : .t26 = 1
+0 : .t24 = .t25 + .t26
+0 : stack[.t23] = .t24
+0 : .t21 = top
+0 : .t22 = 1
+0 : .t20 = .t21 + .t22
+0 : top = .t20
+0 : .t18 = top
+0 : .t19 = high
+0 : stack[.t18] = .t19
+0 : goto 8
+7 : SKIP
+0 : goto 8
+8 : SKIP
+0 : goto 4
+5 : SKIP
+0 : .t9 = 0
+0 : i = .t9
+2 : SKIP
+0 : .t2 = i
+0 : .t3 = n
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t8 = i
+0 : .t7 = arr[.t8]
+0 : write .t7
+0 : .t5 = i
+0 : .t6 = 1
+0 : .t4 = .t5 + .t6
+0 : i = .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== executing T ==
+2
+3
+5
+6
+7
+9
+10
+11
+12
+14
+The number of instructions executed : 1336

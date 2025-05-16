@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# 구현체 빌드
+make
+
+# 기존 result 디렉토리 초기화
+echo "📁 초기화: result/ 디렉토리를 비웁니다."
+rm -rf result
+mkdir -p result/cfgs
+
+for file in tests/*.s; do
+    name=$(basename "$file" .s)
+    log_file="result/${name}.log"
+    input_file="tests/${name}.in"
+
+    echo "▶ Running on $file"
+    
+    # 실행 (2초 제한), 입력 파일이 있으면 리다이렉션
+    if [ -f "$input_file" ]; then
+        echo "  - 📥 using input from $input_file"
+            timeout 2s bash -c "cat '$input_file' '$input_file' '$input_file' '$input_file'   \
+               | dune exec -- ./main.exe '$file'" > "$log_file" 2>&1
+    else
+        timeout 2s dune exec -- ./main.exe "$file" \
+            > "$log_file" 2>&1
+    fi
+    exit_code=$?
+
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ Timeout occurred"   >> "$log_file"
+        echo "⚠️  $name timed 아웃 after 2 seconds."
+    else
+        echo "✅ Finished $name within time."
+    fi
+
+    # cfg.dot 처리
+    if [ -f cfg.dot ]; then
+        cp cfg.dot "result/cfgs/cfg_${name}.dot"
+        dot -Tpng cfg.dot -o "result/cfgs/cfg_${name}.png"
+        echo "  - CFG image saved as result/cfgs/cfg_${name}.png"
+    else
+        echo "  - ⚠️ cfg.dot not found, skipping dot conversion"
+    fi
+done

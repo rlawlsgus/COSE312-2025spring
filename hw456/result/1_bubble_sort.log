@@ -1,0 +1,420 @@
+== S ==
+{
+ int n;
+ int i;
+ int j;
+ int temp;
+ int swapped;
+ int[15] arr;
+ int input;
+ read n;
+ i = 0;
+ while i < n  {
+  read input;
+  arr[i] = input;
+  i = i + 1;
+ }
+
+ i = 0;
+ while i < n - 1  {
+  swapped = 0;
+  j = 0;
+  do      {
+    if arr[j] > arr[j + 1]        {
+     temp = arr[j];
+     arr[j] = arr[j + 1];
+     arr[j + 1] = temp;
+     swapped = 1;
+    }
+else        {
+     temp = temp;
+    }
+
+    j = j + 1;
+   }
+  whilej < n - i - 1;
+  if !(swapped)    {
+   i = n - 1;
+  }
+else    {
+   i = i + 1;
+  }
+
+ }
+
+ print -1;
+ i = 0;
+ while i < n  {
+  print arr[i];
+  i = i + 1;
+ }
+
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : n = 0
+0 : i = 0
+0 : j = 0
+0 : temp = 0
+0 : swapped = 0
+0 : arr = alloc (15)
+0 : input = 0
+0 : read n
+0 : .t89 = 0
+0 : i = .t89
+17 : SKIP
+0 : .t82 = i
+0 : .t83 = n
+0 : .t81 = .t82 < .t83
+0 : iffalse .t81 goto 18
+0 : read input
+0 : .t87 = i
+0 : .t88 = input
+0 : arr[.t87] = .t88
+0 : .t85 = i
+0 : .t86 = 1
+0 : .t84 = .t85 + .t86
+0 : i = .t84
+0 : goto 17
+18 : SKIP
+0 : .t80 = 0
+0 : i = .t80
+4 : SKIP
+0 : .t13 = i
+0 : .t15 = n
+0 : .t16 = 1
+0 : .t14 = .t15 - .t16
+0 : .t12 = .t13 < .t14
+0 : iffalse .t12 goto 5
+0 : .t79 = 0
+0 : swapped = .t79
+0 : .t78 = 0
+0 : j = .t78
+0 : .t60 = j
+0 : .t59 = arr[.t60]
+0 : .t63 = j
+0 : .t64 = 1
+0 : .t62 = .t63 + .t64
+0 : .t61 = arr[.t62]
+0 : .t58 = .t59 > .t61
+0 : if .t58 goto 14
+0 : goto 15
+14 : SKIP
+0 : .t77 = j
+0 : .t76 = arr[.t77]
+0 : temp = .t76
+0 : .t71 = j
+0 : .t74 = j
+0 : .t75 = 1
+0 : .t73 = .t74 + .t75
+0 : .t72 = arr[.t73]
+0 : arr[.t71] = .t72
+0 : .t68 = j
+0 : .t69 = 1
+0 : .t67 = .t68 + .t69
+0 : .t70 = temp
+0 : arr[.t67] = .t70
+0 : .t66 = 1
+0 : swapped = .t66
+0 : goto 16
+15 : SKIP
+0 : .t65 = temp
+0 : temp = .t65
+0 : goto 16
+16 : SKIP
+0 : .t56 = j
+0 : .t57 = 1
+0 : .t55 = .t56 + .t57
+0 : j = .t55
+9 : SKIP
+0 : .t26 = j
+0 : .t29 = n
+0 : .t30 = i
+0 : .t28 = .t29 - .t30
+0 : .t31 = 1
+0 : .t27 = .t28 - .t31
+0 : .t25 = .t26 < .t27
+0 : iffalse .t25 goto 10
+0 : .t37 = j
+0 : .t36 = arr[.t37]
+0 : .t40 = j
+0 : .t41 = 1
+0 : .t39 = .t40 + .t41
+0 : .t38 = arr[.t39]
+0 : .t35 = .t36 > .t38
+0 : if .t35 goto 11
+0 : goto 12
+11 : SKIP
+0 : .t54 = j
+0 : .t53 = arr[.t54]
+0 : temp = .t53
+0 : .t48 = j
+0 : .t51 = j
+0 : .t52 = 1
+0 : .t50 = .t51 + .t52
+0 : .t49 = arr[.t50]
+0 : arr[.t48] = .t49
+0 : .t45 = j
+0 : .t46 = 1
+0 : .t44 = .t45 + .t46
+0 : .t47 = temp
+0 : arr[.t44] = .t47
+0 : .t43 = 1
+0 : swapped = .t43
+0 : goto 13
+12 : SKIP
+0 : .t42 = temp
+0 : temp = .t42
+0 : goto 13
+13 : SKIP
+0 : .t33 = j
+0 : .t34 = 1
+0 : .t32 = .t33 + .t34
+0 : j = .t32
+0 : goto 9
+10 : SKIP
+0 : .t18 = swapped
+0 : .t17 = !.t18
+0 : if .t17 goto 6
+0 : goto 7
+6 : SKIP
+0 : .t23 = n
+0 : .t24 = 1
+0 : .t22 = .t23 - .t24
+0 : i = .t22
+0 : goto 8
+7 : SKIP
+0 : .t20 = i
+0 : .t21 = 1
+0 : .t19 = .t20 + .t21
+0 : i = .t19
+0 : goto 8
+8 : SKIP
+0 : goto 4
+5 : SKIP
+0 : .t11 = 1
+0 : .t10 = -.t11
+0 : write .t10
+0 : .t9 = 0
+0 : i = .t9
+2 : SKIP
+0 : .t2 = i
+0 : .t3 = n
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t8 = i
+0 : .t7 = arr[.t8]
+0 : write .t7
+0 : .t5 = i
+0 : .t6 = 1
+0 : .t4 = .t5 + .t6
+0 : i = .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+-1
+7
+11
+12
+22
+25
+34
+64
+90
+== executing CFG ==
+-1
+7
+11
+12
+22
+25
+34
+64
+90
+== executing T ==
+-1
+7
+11
+12
+22
+25
+34
+64
+90
+The number of instructions executed : 1471
+== optimized T ==
+0 : n = 0
+0 : i = 0
+0 : j = 0
+0 : temp = 0
+0 : swapped = 0
+0 : arr = alloc (15)
+0 : input = 0
+0 : read n
+0 : .t89 = 0
+0 : i = .t89
+17 : SKIP
+0 : .t82 = i
+0 : .t83 = n
+0 : .t81 = .t82 < .t83
+0 : iffalse .t81 goto 18
+0 : read input
+0 : .t87 = i
+0 : .t88 = input
+0 : arr[.t87] = .t88
+0 : .t85 = i
+0 : .t86 = 1
+0 : .t84 = .t85 + .t86
+0 : i = .t84
+0 : goto 17
+18 : SKIP
+0 : .t80 = 0
+0 : i = .t80
+4 : SKIP
+0 : .t13 = i
+0 : .t15 = n
+0 : .t16 = 1
+0 : .t14 = .t15 - .t16
+0 : .t12 = .t13 < .t14
+0 : iffalse .t12 goto 5
+0 : .t79 = 0
+0 : swapped = .t79
+0 : .t78 = 0
+0 : j = .t78
+0 : .t60 = j
+0 : .t59 = arr[.t60]
+0 : .t63 = j
+0 : .t64 = 1
+0 : .t62 = .t63 + .t64
+0 : .t61 = arr[.t62]
+0 : .t58 = .t59 > .t61
+0 : if .t58 goto 14
+0 : goto 15
+14 : SKIP
+0 : .t77 = j
+0 : .t76 = arr[.t77]
+0 : temp = .t76
+0 : .t71 = j
+0 : .t74 = j
+0 : .t75 = 1
+0 : .t73 = .t74 + .t75
+0 : .t72 = arr[.t73]
+0 : arr[.t71] = .t72
+0 : .t68 = j
+0 : .t69 = 1
+0 : .t67 = .t68 + .t69
+0 : .t70 = temp
+0 : arr[.t67] = .t70
+0 : .t66 = 1
+0 : swapped = .t66
+0 : goto 16
+15 : SKIP
+0 : .t65 = temp
+0 : temp = .t65
+0 : goto 16
+16 : SKIP
+0 : .t56 = j
+0 : .t57 = 1
+0 : .t55 = .t56 + .t57
+0 : j = .t55
+9 : SKIP
+0 : .t26 = j
+0 : .t29 = n
+0 : .t30 = i
+0 : .t28 = .t29 - .t30
+0 : .t31 = 1
+0 : .t27 = .t28 - .t31
+0 : .t25 = .t26 < .t27
+0 : iffalse .t25 goto 10
+0 : .t37 = j
+0 : .t36 = arr[.t37]
+0 : .t40 = j
+0 : .t41 = 1
+0 : .t39 = .t40 + .t41
+0 : .t38 = arr[.t39]
+0 : .t35 = .t36 > .t38
+0 : if .t35 goto 11
+0 : goto 12
+11 : SKIP
+0 : .t54 = j
+0 : .t53 = arr[.t54]
+0 : temp = .t53
+0 : .t48 = j
+0 : .t51 = j
+0 : .t52 = 1
+0 : .t50 = .t51 + .t52
+0 : .t49 = arr[.t50]
+0 : arr[.t48] = .t49
+0 : .t45 = j
+0 : .t46 = 1
+0 : .t44 = .t45 + .t46
+0 : .t47 = temp
+0 : arr[.t44] = .t47
+0 : .t43 = 1
+0 : swapped = .t43
+0 : goto 13
+12 : SKIP
+0 : .t42 = temp
+0 : temp = .t42
+0 : goto 13
+13 : SKIP
+0 : .t33 = j
+0 : .t34 = 1
+0 : .t32 = .t33 + .t34
+0 : j = .t32
+0 : goto 9
+10 : SKIP
+0 : .t18 = swapped
+0 : .t17 = !.t18
+0 : if .t17 goto 6
+0 : goto 7
+6 : SKIP
+0 : .t23 = n
+0 : .t24 = 1
+0 : .t22 = .t23 - .t24
+0 : i = .t22
+0 : goto 8
+7 : SKIP
+0 : .t20 = i
+0 : .t21 = 1
+0 : .t19 = .t20 + .t21
+0 : i = .t19
+0 : goto 8
+8 : SKIP
+0 : goto 4
+5 : SKIP
+0 : .t11 = 1
+0 : .t10 = -.t11
+0 : write .t10
+0 : .t9 = 0
+0 : i = .t9
+2 : SKIP
+0 : .t2 = i
+0 : .t3 = n
+0 : .t1 = .t2 < .t3
+0 : iffalse .t1 goto 3
+0 : .t8 = i
+0 : .t7 = arr[.t8]
+0 : write .t7
+0 : .t5 = i
+0 : .t6 = 1
+0 : .t4 = .t5 + .t6
+0 : i = .t4
+0 : goto 2
+3 : SKIP
+0 : HALT
+== executing T ==
+-1
+7
+11
+12
+22
+25
+34
+64
+90
+The number of instructions executed : 1471

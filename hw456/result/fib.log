@@ -1,0 +1,56 @@
+== S ==
+{
+ int x;
+ int y;
+ int n;
+ int i;
+ x = 0;
+ y = 1;
+ i = 0;
+ read n;
+ while i < n  {
+  x = y;
+  y = x + y;
+  i = i + 1;
+ }
+
+ print y;
+}
+== translating S to CFG ==
+cfg has been saved in cfg.dot
+== translating S to T ==
+0 : x = 0
+0 : y = 0
+0 : n = 0
+0 : i = 0
+0 : .t14 = 0
+0 : x = .t14
+0 : .t13 = 1
+0 : y = .t13
+0 : .t12 = 0
+0 : i = .t12
+0 : read n
+2 : SKIP
+0 : .t3 = i
+0 : .t4 = n
+0 : .t2 = .t3 < .t4
+0 : iffalse .t2 goto 3
+0 : .t11 = y
+0 : x = .t11
+0 : .t9 = x
+0 : .t10 = y
+0 : .t8 = .t9 + .t10
+0 : y = .t8
+0 : .t6 = i
+0 : .t7 = 1
+0 : .t5 = .t6 + .t7
+0 : i = .t5
+0 : goto 2
+3 : SKIP
+0 : .t1 = y
+0 : write .t1
+0 : HALT
+== semantic analyzer ==
+no error detected
+== executing S ==
+⏰ Timeout occurred
