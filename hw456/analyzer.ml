@@ -50,9 +50,63 @@ module Interval : Interval = struct
   let from_int n = Range (Int n, Int n)
   let from_bounds i1 i2 = Range (i1, i2)
 
-  let order _ _ = raise NotImplemented
-  let join _ _ = raise NotImplemented
-  let meet _ _ = raise NotImplemented
+  let order i1 i2 = 
+    match i1, i2 with
+    | Bot, _ -> true
+    | _, Bot -> false
+    | Range (l1, u1), Range (l2, u2) ->
+      let compare_bounds b1 b2 =
+        match b1, b2 with
+        | MinusInf, MinusInf -> true
+        | PlusInf, PlusInf -> true
+        | Int n1, Int n2 -> n1 = n2
+        | MinusInf, _ -> true
+        | _, MinusInf -> false
+        | _, PlusInf -> true
+        | PlusInf, _ -> false
+      in
+      compare_bounds l1 l2 && compare_bounds u1 u2
+
+  let join i1 i2 = 
+    match i1, i2 with
+    | Bot, _ -> i2
+    | _, Bot -> i1
+    | Range (l1, u1), Range (l2, u2) ->
+      let l = match l1, l2 with
+        | MinusInf, _ -> MinusInf
+        | _, MinusInf -> MinusInf
+        | Int n1, Int n2 -> if n1 < n2 then l1 else l2
+        | PlusInf, _ -> PlusInf
+        | _, PlusInf -> PlusInf
+      in
+      let u = match u1, u2 with
+        | PlusInf, _ -> PlusInf
+        | _, PlusInf -> PlusInf
+        | Int n1, Int n2 -> if n1 > n2 then u1 else u2
+        | MinusInf, _ -> MinusInf
+        | _, MinusInf -> MinusInf
+      in
+      Range (l, u)
+  let meet i1 i2 = 
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      let l = match l1, l2 with
+        | PlusInf, _ -> PlusInf
+        | _, PlusInf -> PlusInf
+        | Int n1, Int n2 -> if n1 > n2 then l1 else l2
+        | MinusInf, _ -> MinusInf
+        | _, MinusInf -> MinusInf
+      in
+      let u = match u1, u2 with
+        | MinusInf, _ -> MinusInf
+        | _, MinusInf -> MinusInf
+        | Int n1, Int n2 -> if n1 < n2 then u1 else u2
+        | PlusInf, _ -> PlusInf
+        | _, PlusInf -> PlusInf
+      in
+      Range (l, u)
   let widen _ _ = raise NotImplemented
   let narrow _ _ = raise NotImplemented
   let add _ _ = raise NotImplemented
