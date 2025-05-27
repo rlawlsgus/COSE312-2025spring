@@ -58,13 +58,16 @@ module Interval : Interval = struct
     | PlusInf, _ -> false
     | _ -> false
 
-  let lt int1 int2 =
+  let ltn int1 int2 =
     match int1, int2 with
     | MinusInf, _ -> true
     | Int n1, Int n2 -> n1 < n2
     | _, PlusInf -> true
     | PlusInf, _ -> false
     | _ -> false
+
+  let max_int a b = if leq a b then b else a
+  let min_int a b = if leq a b then a else b
 
   let mul_int int1 int2 =
     match int1, int2 with
@@ -98,27 +101,14 @@ module Interval : Interval = struct
     | PlusInf -> Int 0
     | MinusInf -> Int 0
 
-  let is_bool i =
-    match i with
-    | Range (Int 0, Int 0) -> true
-    | Range (Int 1, Int 1) -> true
-    | Range (MinusInf, PlusInf) -> true
-    | _ -> false
-
-  let is_int i =
-    match i with
-    | Range (Int l, Int u) -> l <> 0 || u <> 1
-    | Range (MinusInf, PlusInf) -> true
-    | _ -> false
-
-  let order i1 i2 = 
+  let order i1 i2 =
     match i1, i2 with
     | Bot, _ -> true
     | _, Bot -> false
     | Range (l1, u1), Range (l2, u2) ->
       leq l2 l1 && leq u1 u2
 
-  let join i1 i2 = 
+  let join i1 i2 =
     match i1, i2 with
     | Bot, _ -> i2
     | _, Bot -> i1
@@ -126,24 +116,24 @@ module Interval : Interval = struct
       let l = if leq l1 l2 then l1 else l2 in
       let u = if leq u1 u2 then u2 else u1 in
       Range (l, u)
-  let meet i1 i2 = 
+  let meet i1 i2 =
     match i1, i2 with
     | Bot, _ -> Bot
     | _, Bot -> Bot
     | Range (l1, u1), Range (l2, u2) ->
       let l = if leq l1 l2 then l2 else l1 in
       let u = if leq u1 u2 then u1 else u2 in
-      if leq u l then Range (l, u) else Bot
+      if leq l u then Range (l, u) else Bot
 
-  let widen i1 i2 = 
+  let widen i1 i2 =
     match i1, i2 with
     | Bot, _ -> i2
     | _, Bot -> i1
     | Range (l1, u1), Range (l2, u2) ->
-      let l = if lt l2 l1 then MinusInf else l1 in
-      let u = if lt u1 u2 then PlusInf else u1 in
+      let l = if ltn l2 l1 then MinusInf else l1 in
+      let u = if ltn u1 u2 then PlusInf else u1 in
       Range (l, u)
-  let narrow i1 i2 = 
+  let narrow i1 i2 =
     match i1, i2 with
     | Bot, _ -> Bot
     | _, Bot -> Bot
@@ -153,164 +143,133 @@ module Interval : Interval = struct
       Range (l, u)
 
   let add i1 i2 =
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        let l =
-          match l1, l2 with
-          | MinusInf, PlusInf
-          | PlusInf, MinusInf -> MinusInf
-          | MinusInf, _ | _, MinusInf -> MinusInf
-          | PlusInf, _ | _, PlusInf -> PlusInf
-          | Int i1_val, Int i2_val -> Int (i1_val + i2_val)
-        in
-        let u =
-          match u1, u2 with
-          | MinusInf, PlusInf
-          | PlusInf, MinusInf -> PlusInf
-          | MinusInf, _ | _, MinusInf -> MinusInf
-          | PlusInf, _ | _, PlusInf -> PlusInf
-          | Int i1_val, Int i2_val -> Int (i1_val + i2_val)
-        in
-        Range (l, u)
-  let mul i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        let l =
-          let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
-          let min a b = if leq a b then a else b in
-          List.fold_left min PlusInf pairs
-        in
-        let u =
-          let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
-          let max a b = if leq a b then b else a in
-          List.fold_left max MinusInf pairs
-        in
-        Range (l, u)
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      let l =
+        match l1, l2 with
+        | MinusInf, PlusInf
+        | PlusInf, MinusInf -> MinusInf
+        | MinusInf, _ | _, MinusInf -> MinusInf
+        | PlusInf, _ | _, PlusInf -> PlusInf
+        | Int i1_val, Int i2_val -> Int (i1_val + i2_val)
+      in
+      let u =
+        match u1, u2 with
+        | MinusInf, PlusInf
+        | PlusInf, MinusInf -> PlusInf
+        | MinusInf, _ | _, MinusInf -> MinusInf
+        | PlusInf, _ | _, PlusInf -> PlusInf
+        | Int i1_val, Int i2_val -> Int (i1_val + i2_val)
+      in
+      Range (l, u)
+  let mul i1 i2 =
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      let l =
+        let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
+        let min a b = if leq a b then a else b in
+        List.fold_left min PlusInf pairs
+      in
+      let u =
+        let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
+        let max a b = if leq a b then b else a in
+        List.fold_left max MinusInf pairs
+      in
+      Range (l, u)
   let sub i1 i2 =
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        let neg_i2 = neg_interval (Range (l2, u2)) in
-        add (Range (l1, u1)) neg_i2
-  let div i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if leq l2 (Int 0) && leq (Int 0) u2 then
-          top
-        else
-          let inv_l2_val = inverse_int u2 in
-          let inv_u2_val = inverse_int l2 in
-          let inv_i2_range = Range (inv_l2_val, inv_u2_val) in
-          mul (Range (l1, u1)) inv_i2_range
-
-  let eq i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if l1 = l2 && u1 = u2 && l1 = u1 then
-          one
-        else if meet i1 i2 = Bot then
-          zero
-        else
-          top
-  let le i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if leq u1 l2 then
-          one
-        else if (leq l1 u2) = false then
-          zero
-        else
-          top
-  let lt i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if (leq l2 u1) = false then
-          one
-        else if leq u2 l1 then
-          zero
-        else
-          top
-  let ge i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if leq u2 l1 then
-          one
-        else if (leq u1 l2) = false then
-          zero
-        else
-          top
-  let gt i1 i2 = 
-    if not (is_int i1 && is_int i2) then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (l1, u1), Range (l2, u2) ->
-        if (leq l1 u2) = false then
-          one
-        else if leq u1 l2 then
-          zero
-        else
-          top
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      let neg_i2 = neg_interval (Range (l2, u2)) in
+      add (Range (l1, u1)) neg_i2
+  let div i1 i2 =
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if leq l2 (Int 0) && leq (Int 0) u2 then
+        top
+      else
+        let inv_l2_val = inverse_int u2 in
+        let inv_u2_val = inverse_int l2 in
+        let inv_i2_range = Range (inv_l2_val, inv_u2_val) in
+        mul (Range (l1, u1)) inv_i2_range
+  let le i1 i2 =
+    match i1, i2 with
+    | Bot, _ | _, Bot -> Bot
+    | Range (Int c, Int c'), Range (l, u) when c = c' ->
+        if leq (Int c) u then Range (max_int l (Int c), u) else Bot
+    | Range (l, u), Range (Int c, Int c') when c = c' ->
+        if leq l (Int c) then Range (l, min_int u (Int c)) else Bot
+    | _ -> Bot
+  let lt i1 i2 =
+    match i1, i2 with
+    | Bot, _ | _, Bot -> Bot
+    | Range (Int c, Int c'), Range (l, u) when c = c' ->
+        let min_x = Int (c + 1) in
+        if leq min_x u then Range (max_int l min_x, u) else Bot
+    | Range (l, u), Range (Int c, Int c') when c = c' ->
+        let max_x = Int (c - 1) in
+        if leq l max_x then Range (l, min_int u max_x) else Bot
+    | _ -> Bot
+  let ge i1 i2 =
+    match i1, i2 with
+    | Bot, _ | _, Bot -> Bot
+    | Range (Int c, Int c'), Range (l, u) when c = c' ->
+        if leq l (Int c) then Range (l, min_int u (Int c)) else Bot
+    | Range (l, u), Range (Int c, Int c') when c = c' ->
+        if leq (Int c) u then Range (max_int l (Int c), u) else Bot
+    | _ -> Bot
+  let gt i1 i2 =
+    match i1, i2 with
+    | Bot, _ | _, Bot -> Bot
+    | Range (Int c, Int c'), Range (l, u) when c = c' ->
+        let max_x = Int (c - 1) in
+        if leq l max_x then Range (l, min_int u max_x) else Bot
+    | Range (l, u), Range (Int c, Int c') when c = c' ->
+        let min_x = Int (c + 1) in
+        if leq min_x u then Range (max_int l min_x, u) else Bot
+    | _ -> Bot
+  let eq i1 i2 =
+    match i1, i2 with
+    | Bot, _ | _, Bot -> Bot
+    | Range (Int c, Int c'), Range (l, u) when c = c' ->
+        if leq l (Int c) && leq (Int c) u then Range (Int c, Int c) else Bot
+    | Range (l, u), Range (Int c, Int c') when c = c' ->
+        if leq l (Int c) && leq (Int c) u then Range (Int c, Int c) else Bot
+    | _ -> Bot
   let not i =
-    if (is_bool i) = false then Bot
-    else
+    match i with
+    | Bot -> Bot
+    | Range (l, u) ->
+      if l = Int 0 && u = Int 0 then Bot
+      else if l = Int 0 then Range (Int 1, u)
+      else if u = Int 0 then Range (l, Int (-1))
+      else i
+  let band i1 i2 =
+    let not_zero i =
       match i with
       | Bot -> Bot
-      | Range (Int 1, Int 1) -> zero
-      | Range (Int 0, Int 0) -> one
-      | Range _ -> top
-  let band i1 i2 = 
-    if (is_bool i1 && is_bool i2) = false then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (Int 1, Int 1), Range (Int 1, Int 1) -> one
-      | Range (Int 0, Int 0), Range _ -> zero
-      | Range _, Range (Int 0, Int 0) -> zero
-      | Range _, Range _ -> top
-  let bor i1 i2 = 
-    if (is_bool i1 && is_bool i2) = false then Bot
-    else
-      match i1, i2 with
-      | Bot, _ -> Bot
-      | _, Bot -> Bot
-      | Range (Int 0, Int 0), Range (Int 0, Int 0) -> zero
-      | Range (Int 1, Int 1), Range _ -> one
-      | Range _, Range (Int 1, Int 1) -> one
-      | Range _, Range _ -> top
+      | Range (l, u) ->
+        if l = Int 0 && u = Int 0 then Bot
+        else if l = Int 0 then Range (Int 1, u)
+        else if u = Int 0 then Range (l, Int (-1))
+        else i
+    in
+    eq (not_zero i1) (not_zero i2)
+  let bor i1 i2 =
+    match i1, i2 with
+    | Bot, _ -> i2
+    | _, Bot -> i1
+    | Range (l1, u1), Range (l2, u2) ->
+      let l = if leq l1 l2 then l1 else l2 in
+      let u = if leq u1 u2 then u2 else u1 in
+      Range (l, u)
 end
 
 type allocsite = int 
@@ -454,15 +413,28 @@ let rec eval : S.exp -> AbsMem.t -> AbsVal.t
   | S.AND (e1, e2) -> AbsVal.band (eval e1 mem) (eval e2 mem)
   | S.OR (e1, e2) -> AbsVal.bor (eval e1 mem) (eval e2 mem)
 
-let prune (cond : AbsVal.t) (mem : AbsMem.t) : AbsMem.t =
-  match cond with
-  | (Interval.Bot, _) -> AbsMem.empty
-  | (itv, _) ->
-      BatMap.mapi (fun _ v ->
-        let v_itv = AbsVal.get_interval v in
-        let new_itv = Interval.meet v_itv itv in
-        AbsVal.meet_itv new_itv v
-      ) mem
+let prune (cond : AbsVal.t) (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
+  let rec get_var = function
+    | S.LV (S.ID x) -> Some x
+    | S.LT (e1, e2) | S.LE (e1, e2) | S.GT (e1, e2) | S.GE (e1, e2)
+    | S.EQ (e1, e2) | S.AND (e1, e2) | S.OR (e1, e2) -> (
+        match get_var e1 with
+        | Some x -> Some x
+        | None -> get_var e2
+      )
+    | S.NOT e -> get_var e
+    | _ -> None
+  in
+  match get_var exp with
+  | None -> mem
+  | Some x ->
+    let v = AbsMem.find (AbsLoc.from_var x) mem in
+    let true_itv =
+      let i = AbsVal.get_interval cond in
+      Interval.meet i (Interval.one)
+    in
+    let new_v = AbsVal.meet_itv true_itv v in
+    AbsMem.add (AbsLoc.from_var x) new_v mem
 
 let fixpoint : Cfg.t -> Table.t
 =fun cfg -> 
@@ -480,8 +452,11 @@ let fixpoint : Cfg.t -> Table.t
         match Node.get_instr node with
         | I_assume e -> 
           let v = eval e input in
+          Table.print table;
           AbsVal.to_string v |> prerr_endline;
-          prune v input
+          let prune_v = prune v input e in
+          AbsMem.print prune_v;
+          input
         | I_assign (x, e) ->
           let v = eval e input in
           (match x with
@@ -528,7 +503,7 @@ let fixpoint : Cfg.t -> Table.t
         match Node.get_instr node with
         | I_assume e -> 
           let v = eval e input in
-          prune v input
+          prune v input e
         | I_assign (x, e) ->
           let v = eval e input in
           (match x with
