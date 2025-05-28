@@ -1,14 +1,14 @@
 {
-  int[10] arr;
-  int i;
-
-  i = 0;
-  while (i < 10) {
-    arr[i] = i;
-    i++;
-  }
-  while (i < 9) {
-    print (i);
-  }
-  print (i);
+ int i;
+ int[10] a;
+ while (1==1) {
+ int j;
+ read(j);
+ if (0 <= j) {
+ if (j < 10) {
+ a[j] = i;
+ }
+ }
+ i++;
+ }
 }

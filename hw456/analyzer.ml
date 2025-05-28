@@ -5,6 +5,7 @@ exception DivByZero
 exception OutOfBounds
 exception TypeMismatch
 exception InfiniteLoop
+exception UnassignedVariable
 
 module type Interval = sig
   type integer = PlusInf | MinusInf | Int of int 
@@ -418,16 +419,24 @@ let rec eval : S.exp -> AbsMem.t -> AbsVal.t
   | S.NUM n -> AbsVal.from_itv (Interval.from_int n)
   | S.LV lv ->
     (match lv with
-    | S.ID x -> AbsMem.find (AbsLoc.from_var x) mem
+    | S.ID x ->
+      let v = AbsMem.find (AbsLoc.from_var x) mem in
+      if AbsVal.get_absarray v <> AbsArray.bot then
+        raise TypeMismatch;
+      if v = AbsVal.bot then
+        raise UnassignedVariable
+      else v
     | S.ARR (x, e) ->
-      let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+      let arr_val = AbsMem.find (AbsLoc.from_var x) mem in
+      if arr_val = AbsVal.bot then raise UnassignedVariable;
+      let arr = AbsVal.get_absarray arr_val in
       let allocsites = AbsArray.get_allocsites arr in
       let size = AbsArray.get_size arr in
       let idx = eval e mem in
       let idx_itv = AbsVal.get_interval idx in
       let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-      if Interval.lt idx_itv (Interval.from_int 0) = Interval.top || 
-         Interval.ge idx_itv size_itv = Interval.top then
+      if Interval.lt idx_itv (Interval.from_int 0) <> Interval.zero ||
+         Interval.ge idx_itv size_itv <> Interval.zero then
         raise OutOfBounds
       else
         let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
@@ -476,8 +485,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -509,8 +518,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -542,8 +551,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -575,8 +584,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -608,8 +617,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -641,8 +650,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -674,8 +683,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -707,8 +716,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
             | _ -> idx_itv
           in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -729,8 +738,8 @@ let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
           let other_itv = AbsVal.get_interval (eval e2 mem) in
           let pruned = Interval.meet idx_itv other_itv in
           let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
-             not (Interval.ge pruned size_itv = Interval.zero) then
+          if Interval.lt pruned (Interval.from_int 0) <> Interval.zero || 
+             Interval.ge pruned size_itv <> Interval.zero then
             raise OutOfBounds
           else
             mem)
@@ -786,17 +795,15 @@ and negate_exp exp =
               | S.ARR (x_arr, e_idx) ->
                 let arr_val = AbsMem.find (AbsLoc.from_var x_arr) input in
                 let arr = AbsVal.get_absarray arr_val in
-                if arr = AbsArray.bot then raise TypeMismatch;
   
                 let allocsites = AbsArray.get_allocsites arr in
                 let size = AbsArray.get_size arr in
                 let idx = eval e_idx input in
                 let idx_itv = AbsVal.get_interval idx in
-                if AbsVal.get_absarray idx <> AbsArray.bot then raise TypeMismatch;
   
                 let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-                if Interval.lt idx_itv (Interval.from_int 0) = Interval.top ||
-                   Interval.ge idx_itv size_itv = Interval.top then
+                if Interval.lt idx_itv (Interval.from_int 0) <> Interval.zero ||
+                   Interval.ge idx_itv size_itv <> Interval.zero then
                   raise OutOfBounds
                 else
                   let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
@@ -807,7 +814,7 @@ and negate_exp exp =
             | I_read x ->
               AbsMem.add (AbsLoc.from_var x) (AbsVal.from_itv Interval.top) input
             | I_print e -> let _ = eval e input in input
-            | _ -> input
+            | I_skip -> input
           in
           let old = Table.find n table in
           let new_x =
@@ -850,22 +857,12 @@ and negate_exp exp =
               (match x with
               | S.ID x_id -> AbsMem.add (AbsLoc.from_var x_id) v input
               | S.ARR (x_arr, e_idx) ->
+                let _ = eval e_idx input in
                 let arr_val = AbsMem.find (AbsLoc.from_var x_arr) input in
                 let arr = AbsVal.get_absarray arr_val in
-                if arr = AbsArray.bot then raise TypeMismatch;
   
                 let allocsites = AbsArray.get_allocsites arr in
-                let size = AbsArray.get_size arr in
-                let idx = eval e_idx input in
-                let idx_itv = AbsVal.get_interval idx in
-                if AbsVal.get_absarray idx <> AbsArray.bot then raise TypeMismatch;
-  
-                let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
-                if Interval.lt idx_itv (Interval.from_int 0) = Interval.top ||
-                   Interval.ge idx_itv size_itv = Interval.top then
-                  raise OutOfBounds
-                else
-                  let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
+                let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
                   AbsMem.add_set locs v input)
             | I_alloc (x, size) ->
               let v = AbsVal.from_absarr (AbsArray.create (Node.get_nodeid n) size) in
@@ -899,14 +896,64 @@ and negate_exp exp =
       let after_widening = widening_phase initial_worklist_widening initial_table in
       prerr_endline "After Widening:";
       Table.print after_widening;
-      let initial_worklist_narrowing = Cfg.nodesof cfg in
-      let after_narrowing = narrowing_phase initial_worklist_narrowing after_widening in
-      prerr_endline "After Narrowing:";
+      let rec repeat_narrowing n table =
+        if n = 0 then table
+        else
+          let initial_worklist_narrowing = Cfg.nodesof cfg in
+          let after_narrowing = narrowing_phase initial_worklist_narrowing table in
+          prerr_endline ("After Narrowing " ^ string_of_int (4 - n) ^ ":");
+          Table.print after_narrowing;
+          repeat_narrowing (n - 1) after_narrowing
+      in
+      let after_narrowing = repeat_narrowing 3 after_widening in
       Table.print after_narrowing;
       after_narrowing
 
 let inspect : Cfg.t -> Table.t -> bool 
-=fun _ _ -> true
+=fun cfg table -> 
+  prerr_endline "Inspecting CFG...";
+  (* 루프 헤드 노드 검사 *)
+  let entry = Cfg.get_entry cfg in
+  let rec dfs visited node =
+    if List.mem node visited then true
+    else
+      let visited' = node :: visited in
+      let mem = Table.find node table in
+      (* 현재 노드 처리 *)
+      Node.to_string node |> prerr_endline;
+      match Node.get_instr node with
+      | I_assume e -> 
+        let cond = eval e mem in
+        let cond_itv = AbsVal.get_interval cond in
+        (match cond_itv with
+          | Interval.Range (Int 1, Int 1) -> 
+            visit_successors visited' node  (* 일반 assume 참 처리 *)
+          | Interval.Range (Int 0, Int 0) -> 
+            true  (* 데드코드 제외 *)
+          | _ -> 
+            visit_successors visited' node)
+      | I_assign (_, e) -> 
+        let _ = eval e mem in
+        visit_successors visited' node
+      | I_print e -> 
+        let _ = eval e mem in
+        visit_successors visited' node
+      | _ -> 
+        visit_successors visited' node
+  and visit_successors visited node =
+    let succs = Cfg.succs node cfg in
+    let succ_list = NodeSet.elements succs in
+    check_all_successors visited succ_list
+  and check_all_successors visited = function
+    | [] -> true
+    | succ :: rest ->
+      if dfs visited succ then 
+        check_all_successors visited rest
+      else 
+        false
+  in
+  dfs [] entry
+
     
 let analyze : Cfg.t -> bool 
 =fun cfg -> 
@@ -926,6 +973,9 @@ let analyze : Cfg.t -> bool
       false
     | InfiniteLoop -> 
       prerr_endline "Warning: Infinite loop detected";
+      false
+    | UnassignedVariable -> 
+      prerr_endline "Warning: Unassigned variable detected";
       false
     | _ -> 
       prerr_endline "Warning: Unknown error occurred";
