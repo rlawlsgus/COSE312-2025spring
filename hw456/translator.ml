@@ -205,6 +205,7 @@ let rec create_cfg : (Cfg.t * S.block * Node.t) -> (Cfg.t * Node.t)
           let cfg = Cfg.add_node assumeF_node cfg in
           let cfg = Cfg.add_edge skip_node assumeT_node cfg in
           let cfg = Cfg.add_edge skip_node assumeF_node cfg in
+          let cfg = Cfg.add_loophead skip_node cfg in
           let (cfg, t_lnode) = create_cfg_stmt (cfg, s, assumeT_node) in
           let cfg = Cfg.add_edge t_lnode skip_node cfg in
           (cfg, assumeF_node)

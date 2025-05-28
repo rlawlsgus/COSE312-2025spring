@@ -1,6 +1,10 @@
 open G 
 
 exception NotImplemented
+exception DivByZero
+exception OutOfBounds
+exception TypeMismatch
+exception InfiniteLoop
 
 module type Interval = sig
   type integer = PlusInf | MinusInf | Int of int 
@@ -80,6 +84,14 @@ module Interval : Interval = struct
     | MinusInf, PlusInf -> MinusInf
     | PlusInf, MinusInf -> MinusInf
     | MinusInf, MinusInf -> PlusInf
+  
+  let div_int int1 int2 =
+    match int1, int2 with
+    | MinusInf, Int i -> if i < 0 then PlusInf else MinusInf
+    | Int i1, Int i2 -> Int (i1 / i2)
+    | PlusInf, Int i -> if i < 0 then MinusInf else PlusInf
+    | _, PlusInf -> Int 0
+    | _, MinusInf -> Int 0
 
   let neg_int i =
     match i with
@@ -90,16 +102,6 @@ module Interval : Interval = struct
     match i with
     | Bot -> Bot
     | Range (l, u) -> Range (neg_int u, neg_int l)
-  
-  let inverse_int i =
-    match i with
-    | Int n ->
-      if n = 0 then PlusInf
-      else if n = 1 then Int 1
-      else if n = -1 then Int (-1)
-      else Int 0
-    | PlusInf -> Int 0
-    | MinusInf -> Int 0
 
   let order i1 i2 =
     match i1, i2 with
@@ -169,15 +171,12 @@ module Interval : Interval = struct
     | Bot, _ -> Bot
     | _, Bot -> Bot
     | Range (l1, u1), Range (l2, u2) ->
+      let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
       let l =
-        let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
-        let min a b = if leq a b then a else b in
-        List.fold_left min PlusInf pairs
+        List.fold_left min_int PlusInf pairs
       in
       let u =
-        let pairs = [mul_int l1 l2; mul_int l1 u2; mul_int u1 l2; mul_int u1 u2] in
-        let max a b = if leq a b then b else a in
-        List.fold_left max MinusInf pairs
+        List.fold_left max_int MinusInf pairs
       in
       Range (l, u)
   let sub i1 i2 =
@@ -193,83 +192,109 @@ module Interval : Interval = struct
     | _, Bot -> Bot
     | Range (l1, u1), Range (l2, u2) ->
       if leq l2 (Int 0) && leq (Int 0) u2 then
-        top
+        raise DivByZero
       else
-        let inv_l2_val = inverse_int u2 in
-        let inv_u2_val = inverse_int l2 in
-        let inv_i2_range = Range (inv_l2_val, inv_u2_val) in
-        mul (Range (l1, u1)) inv_i2_range
-  let le i1 i2 =
+        let pairs = [div_int l1 l2; div_int l1 u2; div_int u1 l2; div_int u1 u2] in
+        let l =
+          List.fold_left min_int PlusInf pairs
+        in
+        let u =
+          List.fold_left max_int MinusInf pairs
+        in
+        Range (l, u)
+
+  let eq i1 i2 = 
     match i1, i2 with
-    | Bot, _ | _, Bot -> Bot
-    | Range (Int c, Int c'), Range (l, u) when c = c' ->
-        if leq (Int c) u then Range (max_int l (Int c), u) else Bot
-    | Range (l, u), Range (Int c, Int c') when c = c' ->
-        if leq l (Int c) then Range (l, min_int u (Int c)) else Bot
-    | _ -> Bot
-  let lt i1 i2 =
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if l1 = l2 && u1 = u2 && l1 = u1 then
+        one
+      else if meet i1 i2 = Bot then
+        zero
+      else
+        top
+
+  let le i1 i2 = 
     match i1, i2 with
-    | Bot, _ | _, Bot -> Bot
-    | Range (Int c, Int c'), Range (l, u) when c = c' ->
-        let min_x = Int (c + 1) in
-        if leq min_x u then Range (max_int l min_x, u) else Bot
-    | Range (l, u), Range (Int c, Int c') when c = c' ->
-        let max_x = Int (c - 1) in
-        if leq l max_x then Range (l, min_int u max_x) else Bot
-    | _ -> Bot
-  let ge i1 i2 =
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if leq u1 l2 then
+        one
+      else if ltn u2 l1 then
+        zero
+      else
+        top
+
+  let lt i1 i2 = 
     match i1, i2 with
-    | Bot, _ | _, Bot -> Bot
-    | Range (Int c, Int c'), Range (l, u) when c = c' ->
-        if leq l (Int c) then Range (l, min_int u (Int c)) else Bot
-    | Range (l, u), Range (Int c, Int c') when c = c' ->
-        if leq (Int c) u then Range (max_int l (Int c), u) else Bot
-    | _ -> Bot
-  let gt i1 i2 =
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if ltn u1 l2 then
+        one
+      else if leq u2 l1 then
+        zero
+      else
+        top
+
+  let ge i1 i2 = 
     match i1, i2 with
-    | Bot, _ | _, Bot -> Bot
-    | Range (Int c, Int c'), Range (l, u) when c = c' ->
-        let max_x = Int (c - 1) in
-        if leq l max_x then Range (l, min_int u max_x) else Bot
-    | Range (l, u), Range (Int c, Int c') when c = c' ->
-        let min_x = Int (c + 1) in
-        if leq min_x u then Range (max_int l min_x, u) else Bot
-    | _ -> Bot
-  let eq i1 i2 =
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if leq u2 l1 then
+        one
+      else if ltn u1 l2 then
+        zero
+      else
+        top
+
+  let gt i1 i2 = 
     match i1, i2 with
-    | Bot, _ | _, Bot -> Bot
-    | Range (Int c, Int c'), Range (l, u) when c = c' ->
-        if leq l (Int c) && leq (Int c) u then Range (Int c, Int c) else Bot
-    | Range (l, u), Range (Int c, Int c') when c = c' ->
-        if leq l (Int c) && leq (Int c) u then Range (Int c, Int c) else Bot
-    | _ -> Bot
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (l1, u1), Range (l2, u2) ->
+      if ltn u2 l1 then
+        one
+      else if leq u1 l2 then
+        zero
+      else
+        top
+
   let not i =
     match i with
     | Bot -> Bot
+    | Range (Int 0, Int 0) -> one
     | Range (l, u) ->
-      if l = Int 0 && u = Int 0 then Bot
-      else if l = Int 0 then Range (Int 1, u)
-      else if u = Int 0 then Range (l, Int (-1))
-      else i
-  let band i1 i2 =
-    let not_zero i =
-      match i with
-      | Bot -> Bot
-      | Range (l, u) ->
-        if l = Int 0 && u = Int 0 then Bot
-        else if l = Int 0 then Range (Int 1, u)
-        else if u = Int 0 then Range (l, Int (-1))
-        else i
-    in
-    eq (not_zero i1) (not_zero i2)
-  let bor i1 i2 =
+      if leq l (Int 0) && leq (Int 0) u then
+        top
+      else
+        zero
+
+  let band i1 i2 = 
     match i1, i2 with
-    | Bot, _ -> i2
-    | _, Bot -> i1
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (Int 0, Int 0), Range _ -> zero
+    | Range _, Range (Int 0, Int 0) -> zero
     | Range (l1, u1), Range (l2, u2) ->
-      let l = if leq l1 l2 then l1 else l2 in
-      let u = if leq u1 u2 then u2 else u1 in
-      Range (l, u)
+      if leq l1 (Int 0) && leq (Int 0) u1 || leq l2 (Int 0) && leq (Int 0) u2 then
+        top
+      else
+        one
+
+  let bor i1 i2 = 
+    match i1, i2 with
+    | Bot, _ -> Bot
+    | _, Bot -> Bot
+    | Range (Int 0, Int 0), Range (Int 0, Int 0) -> zero
+    | Range (l1, u1), Range (l2, u2) ->
+      if leq l1 (Int 0) && leq (Int 0) u1 && leq l2 (Int 0) && leq (Int 0) u2 then
+        top
+      else
+        one
 end
 
 type allocsite = int 
@@ -394,11 +419,19 @@ let rec eval : S.exp -> AbsMem.t -> AbsVal.t
   | S.LV lv ->
     (match lv with
     | S.ID x -> AbsMem.find (AbsLoc.from_var x) mem
-    | S.ARR (x, _) ->
+    | S.ARR (x, e) ->
       let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
       let allocsites = AbsArray.get_allocsites arr in
-      let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
-      AbsMem.find_set locs mem)
+      let size = AbsArray.get_size arr in
+      let idx = eval e mem in
+      let idx_itv = AbsVal.get_interval idx in
+      let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+      if Interval.lt idx_itv (Interval.from_int 0) = Interval.top || 
+         Interval.ge idx_itv size_itv = Interval.top then
+        raise OutOfBounds
+      else
+        let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
+        AbsMem.find_set locs mem)
   | S.ADD (e1, e2) -> AbsVal.add (eval e1 mem) (eval e2 mem)
   | S.SUB (e1, e2) -> AbsVal.sub (eval e1 mem) (eval e2 mem)
   | S.MUL (e1, e2) -> AbsVal.mul (eval e1 mem) (eval e2 mem)
@@ -413,145 +446,487 @@ let rec eval : S.exp -> AbsMem.t -> AbsVal.t
   | S.AND (e1, e2) -> AbsVal.band (eval e1 mem) (eval e2 mem)
   | S.OR (e1, e2) -> AbsVal.bor (eval e1 mem) (eval e2 mem)
 
-let prune (cond : AbsVal.t) (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
-  let rec get_var = function
-    | S.LV (S.ID x) -> Some x
-    | S.LT (e1, e2) | S.LE (e1, e2) | S.GT (e1, e2) | S.GE (e1, e2)
-    | S.EQ (e1, e2) | S.AND (e1, e2) | S.OR (e1, e2) -> (
-        match get_var e1 with
-        | Some x -> Some x
-        | None -> get_var e2
-      )
-    | S.NOT e -> get_var e
-    | _ -> None
-  in
-  match get_var exp with
-  | None -> mem
-  | Some x ->
-    let v = AbsMem.find (AbsLoc.from_var x) mem in
-    let true_itv =
-      let i = AbsVal.get_interval cond in
-      Interval.meet i (Interval.one)
-    in
-    let new_v = AbsVal.meet_itv true_itv v in
-    AbsMem.add (AbsLoc.from_var x) new_v mem
+let rec prune (mem : AbsMem.t) (exp : S.exp) : AbsMem.t =
+  match exp with
+  | S.LT (S.LV lv, e2) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf (Int (u2-1)))
+            | Interval.Range (_, u2) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf u2)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e1) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e1 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> 
+              if u2 <= 0 then Interval.bot
+              else Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf (Int (u2-1)))
+            | Interval.Range (_, u2) -> Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf u2)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.LT (e1, S.LV lv) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> Interval.meet itv (Interval.from_bounds (Int (l1+1)) Interval.PlusInf)
+            | Interval.Range (l1, _) -> Interval.meet itv (Interval.from_bounds l1 Interval.PlusInf)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e2) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e2 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> 
+              if l1 >= 0 then Interval.meet idx_itv (Interval.from_bounds (Int (l1+1)) Interval.PlusInf)
+              else idx_itv
+            | Interval.Range (l1, _) -> Interval.meet idx_itv (Interval.from_bounds l1 Interval.PlusInf)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.LE (S.LV lv, e2) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf (Int u2))
+            | Interval.Range (_, u2) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf u2)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e1) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e1 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> 
+              if u2 < 0 then Interval.bot
+              else Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf (Int u2))
+            | Interval.Range (_, u2) -> Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf u2)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.LE (e1, S.LV lv) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> Interval.meet itv (Interval.from_bounds (Int l1) Interval.PlusInf)
+            | Interval.Range (l1, _) -> Interval.meet itv (Interval.from_bounds l1 Interval.PlusInf)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e2) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e2 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> 
+              if l1 > 0 then Interval.meet idx_itv (Interval.from_bounds (Int l1) Interval.PlusInf)
+              else idx_itv
+            | Interval.Range (l1, _) -> Interval.meet idx_itv (Interval.from_bounds l1 Interval.PlusInf)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.GT (S.LV lv, e2) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> Interval.meet itv (Interval.from_bounds (Int (u2+1)) Interval.PlusInf)
+            | Interval.Range (_, u2) -> Interval.meet itv (Interval.from_bounds u2 Interval.PlusInf)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e1) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e1 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> 
+              if u2 < 0 then Interval.bot
+              else Interval.meet idx_itv (Interval.from_bounds (Int (u2+1)) Interval.PlusInf)
+            | Interval.Range (_, u2) -> Interval.meet idx_itv (Interval.from_bounds u2 Interval.PlusInf)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.GT (e1, S.LV lv) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf (Int (l1-1)))
+            | Interval.Range (l1, _) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf l1)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e2) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e2 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> 
+              if l1 > 0 then Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf (Int (l1-1)))
+              else idx_itv
+            | Interval.Range (l1, _) -> Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf l1)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.GE (S.LV lv, e2) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> Interval.meet itv (Interval.from_bounds (Int u2) Interval.PlusInf)
+            | Interval.Range (_, u2) -> Interval.meet itv (Interval.from_bounds u2 Interval.PlusInf)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e1) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e1 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let right_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned =
+            match right_itv with
+            | Interval.Range (_, Interval.Int u2) -> 
+              if u2 < 0 then Interval.bot
+              else Interval.meet idx_itv (Interval.from_bounds (Int u2) Interval.PlusInf)
+            | Interval.Range (_, u2) -> Interval.meet idx_itv (Interval.from_bounds u2 Interval.PlusInf)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.GE (e1, S.LV lv) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf (Int l1))
+            | Interval.Range (l1, _) -> Interval.meet itv (Interval.from_bounds Interval.MinusInf l1)
+            | _ -> itv
+          in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e2) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e2 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let left_itv = AbsVal.get_interval (eval e1 mem) in
+          let pruned =
+            match left_itv with
+            | Interval.Range (Interval.Int l1, _) -> 
+              if l1 > 0 then Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf (Int l1))
+              else idx_itv
+            | Interval.Range (l1, _) -> Interval.meet idx_itv (Interval.from_bounds Interval.MinusInf l1)
+            | _ -> idx_itv
+          in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.EQ (S.LV lv, e2)
+  | S.EQ (e2, S.LV lv) ->
+      (match lv with
+      | S.ID x ->
+          let v = AbsMem.find (AbsLoc.from_var x) mem in
+          let itv = AbsVal.get_interval v in
+          let other_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned = Interval.meet itv other_itv in
+          AbsMem.add (AbsLoc.from_var x) (AbsVal.meet_itv pruned v) mem
+      | S.ARR (x, e1) ->
+          let arr = AbsVal.get_absarray (AbsMem.find (AbsLoc.from_var x) mem) in
+          let size = AbsArray.get_size arr in
+          let idx = eval e1 mem in
+          let idx_itv = AbsVal.get_interval idx in
+          let other_itv = AbsVal.get_interval (eval e2 mem) in
+          let pruned = Interval.meet idx_itv other_itv in
+          let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+          if not (Interval.lt pruned (Interval.from_int 0) = Interval.zero) || 
+             not (Interval.ge pruned size_itv = Interval.zero) then
+            raise OutOfBounds
+          else
+            mem)
+  | S.NOT e -> 
+    prune mem (negate_exp e)
+  | S.AND (e1, e2) ->
+      let mem' = prune mem e1 in
+      prune mem' e2
+  | S.OR (e1, e2) ->
+      let mem1 = prune mem e1 in
+      let mem2 = prune mem e2 in
+      AbsMem.join mem1 mem2
+  | _ -> mem
 
-let fixpoint : Cfg.t -> Table.t
-=fun cfg -> 
-  let rec widening_phase worklist table visited =
-    match worklist with
-    | [] -> table
-    | node :: rest ->
-      let preds = Cfg.preds node cfg in
-      let input = 
-        NodeSet.fold (fun pred acc ->
-          AbsMem.join acc (Table.find pred table)
-        ) preds AbsMem.empty
-      in
-      let output = 
-        match Node.get_instr node with
-        | I_assume e -> 
-          let v = eval e input in
-          Table.print table;
-          AbsVal.to_string v |> prerr_endline;
-          let prune_v = prune v input e in
-          AbsMem.print prune_v;
-          input
-        | I_assign (x, e) ->
-          let v = eval e input in
-          (match x with
-          | S.ID x -> AbsMem.add (AbsLoc.from_var x) v input
-          | _ -> input)
-        | I_alloc (x, n) ->
-          let v = AbsVal.from_absarr (AbsArray.create (Node.get_nodeid node) n) in
-          AbsMem.add (AbsLoc.from_var x) v input
-        | I_read x ->
-          AbsMem.add (AbsLoc.from_var x) (AbsVal.from_itv (Interval.top)) input
-        | I_print e ->
-          let _ = eval e input in
-          input
-        | _ -> input
-      in
-      let old_output = Table.find node table in
-      let new_output = AbsMem.widen old_output output in
-      let succs = Cfg.succs node cfg in
-      let new_worklist =
-        if (AbsMem.order new_output old_output) && NodeSet.mem node visited then
-          rest
-        else
-          NodeSet.elements succs @ rest
-      in
-      let new_table =
-        if AbsMem.order new_output old_output then table
-        else Table.add node new_output table
-      in
-      let new_visited = NodeSet.add node visited in
-      widening_phase new_worklist new_table new_visited
-  in
+and negate_exp exp =
+  match exp with
+  | S.LT (a, b) -> S.GE (a, b)
+  | S.LE (a, b) -> S.GT (a, b)
+  | S.GT (a, b) -> S.LE (a, b)
+  | S.GE (a, b) -> S.LT (a, b)
+  | S.EQ (a, b) -> S.OR (S.LT (a, b), S.GT (a, b))
+  | S.NOT e -> e
+  | S.OR (e1, e2) -> S.AND (negate_exp e1, negate_exp e2)
+  | S.AND (e1, e2) -> S.OR (negate_exp e1, negate_exp e2)
+  | _ -> exp
 
-  let rec narrowing_phase worklist table visited =
-    match worklist with
-    | [] -> table
-    | node :: rest ->
-      let preds = Cfg.preds node cfg in
-      let input = 
-        NodeSet.fold (fun pred acc ->
-          AbsMem.join acc (Table.find pred table)
-        ) preds AbsMem.empty
-      in
-      let output = 
-        match Node.get_instr node with
-        | I_assume e -> 
-          let v = eval e input in
-          prune v input e
-        | I_assign (x, e) ->
-          let v = eval e input in
-          (match x with
-          | S.ID x -> AbsMem.add (AbsLoc.from_var x) v input
-          | _ -> input)
-        | I_alloc (x, n) ->
-          let v = AbsVal.from_absarr (AbsArray.create (Node.get_nodeid node) n) in
-          AbsMem.add (AbsLoc.from_var x) v input
-        | I_read x ->
-          AbsMem.add (AbsLoc.from_var x) (AbsVal.from_itv (Interval.top)) input
-        | I_print e ->
-          let _ = eval e input in
-          input
-        | _ -> input
-      in
-      let old_output = Table.find node table in
-      let new_output = AbsMem.narrow old_output output in
-      let succs = Cfg.succs node cfg in
-      let new_worklist =
-        if AbsMem.order old_output new_output && NodeSet.mem node visited then
-          rest
-        else
-          NodeSet.elements succs @ rest
-      in
-      let new_table =
-        if AbsMem.order old_output new_output then table
-        else Table.add node new_output table
-      in
-      let new_visited = NodeSet.add node visited in
-      narrowing_phase new_worklist new_table new_visited
-  in
-
-  let initial_table = Table.init (Cfg.nodesof cfg) in
-  let entry = Cfg.get_entry cfg in
-  let worklist = [entry] in
-  let visited = NodeSet.empty in
+  let fixpoint : Cfg.t -> Table.t =
+    fun cfg ->
+      let nodes = Cfg.nodesof cfg in
+      let entry = Cfg.get_entry cfg in
   
-  let after_widening = widening_phase worklist initial_table visited in
-  Table.print after_widening;
-  let after_narrowing = narrowing_phase worklist after_widening visited in
-  Table.print after_narrowing;
-  after_narrowing
+      let rec widening_phase worklist table =
+        match worklist with
+        | [] -> table
+        | n :: rest ->
+          let preds = Cfg.preds n cfg in
+          let input =
+            NodeSet.fold (fun pred acc -> AbsMem.join acc (Table.find pred table)) preds AbsMem.empty
+          in
+          let s =
+            match Node.get_instr n with
+            | I_assume e ->
+              let pruned = prune input e in
+              let cond = eval e input in
+              if AbsVal.get_interval cond = Interval.zero then
+                AbsMem.empty
+              else
+                pruned
+            | I_assign (x, e_assign) ->
+              let v = eval e_assign input in
+              (match x with
+              | S.ID x_id -> AbsMem.add (AbsLoc.from_var x_id) v input
+              | S.ARR (x_arr, e_idx) ->
+                let arr_val = AbsMem.find (AbsLoc.from_var x_arr) input in
+                let arr = AbsVal.get_absarray arr_val in
+                if arr = AbsArray.bot then raise TypeMismatch;
+  
+                let allocsites = AbsArray.get_allocsites arr in
+                let size = AbsArray.get_size arr in
+                let idx = eval e_idx input in
+                let idx_itv = AbsVal.get_interval idx in
+                if AbsVal.get_absarray idx <> AbsArray.bot then raise TypeMismatch;
+  
+                let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+                if Interval.lt idx_itv (Interval.from_int 0) = Interval.top ||
+                   Interval.ge idx_itv size_itv = Interval.top then
+                  raise OutOfBounds
+                else
+                  let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
+                  AbsMem.add_set locs v input)
+            | I_alloc (x, size) ->
+              let v = AbsVal.from_absarr (AbsArray.create (Node.get_nodeid n) size) in
+              AbsMem.add (AbsLoc.from_var x) v input
+            | I_read x ->
+              AbsMem.add (AbsLoc.from_var x) (AbsVal.from_itv Interval.top) input
+            | I_print e -> let _ = eval e input in input
+            | _ -> input
+          in
+          let old = Table.find n table in
+          let new_x =
+            if Cfg.is_loophead n cfg then
+              AbsMem.widen old s
+            else
+              AbsMem.join old s
+          in
+          let changed = not (AbsMem.order new_x old && AbsMem.order old new_x) in
+          let succs = Cfg.succs n cfg |> NodeSet.elements in
+          let new_worklist =
+            if changed then
+              List.fold_left (fun wl n' -> if List.mem n' wl then wl else n' :: wl) rest succs
+            else
+              rest
+          in
+          let new_table = if changed then Table.add n new_x table else table in
+          widening_phase new_worklist new_table
+      in
+  
+      let rec narrowing_phase worklist table =
+        match worklist with
+        | [] -> table
+        | n :: rest ->
+          let preds = Cfg.preds n cfg in
+          let input =
+            NodeSet.fold (fun pred acc -> AbsMem.join acc (Table.find pred table)) preds AbsMem.empty
+          in
+          let s =
+            match Node.get_instr n with
+            | I_assume e ->
+              let pruned = prune input e in
+              let cond = eval e input in
+              if AbsVal.get_interval cond = Interval.zero then
+                AbsMem.empty
+              else
+                pruned
+            | I_assign (x, e_assign) ->
+              let v = eval e_assign input in
+              (match x with
+              | S.ID x_id -> AbsMem.add (AbsLoc.from_var x_id) v input
+              | S.ARR (x_arr, e_idx) ->
+                let arr_val = AbsMem.find (AbsLoc.from_var x_arr) input in
+                let arr = AbsVal.get_absarray arr_val in
+                if arr = AbsArray.bot then raise TypeMismatch;
+  
+                let allocsites = AbsArray.get_allocsites arr in
+                let size = AbsArray.get_size arr in
+                let idx = eval e_idx input in
+                let idx_itv = AbsVal.get_interval idx in
+                if AbsVal.get_absarray idx <> AbsArray.bot then raise TypeMismatch;
+  
+                let size_itv = AbsVal.get_interval (AbsVal.from_itv size) in
+                if Interval.lt idx_itv (Interval.from_int 0) = Interval.top ||
+                   Interval.ge idx_itv size_itv = Interval.top then
+                  raise OutOfBounds
+                else
+                  let locs = BatSet.map (fun a -> AbsLoc.from_allocsite a) allocsites in
+                  AbsMem.add_set locs v input)
+            | I_alloc (x, size) ->
+              let v = AbsVal.from_absarr (AbsArray.create (Node.get_nodeid n) size) in
+              AbsMem.add (AbsLoc.from_var x) v input
+            | I_read x ->
+              AbsMem.add (AbsLoc.from_var x) (AbsVal.from_itv Interval.top) input
+            | I_print e -> let _ = eval e input in input
+            | _ -> input
+          in
+          let old = Table.find n table in
+          let new_x =
+            if Cfg.is_loophead n cfg then
+              AbsMem.narrow old s
+            else
+              s
+          in
+          let changed = not (AbsMem.order new_x old && AbsMem.order old new_x) in
+          let succs = Cfg.succs n cfg |> NodeSet.elements in
+          let new_worklist =
+            if changed then
+              List.fold_left (fun wl n' -> if List.mem n' wl then wl else n' :: wl) rest succs
+            else
+              rest
+          in
+          let new_table = if changed then Table.add n new_x table else table in
+          narrowing_phase new_worklist new_table
+      in
+  
+      let initial_table = Table.init nodes in
+      let initial_worklist_widening = entry :: (Cfg.succs (entry) cfg |> NodeSet.elements) in
+      let after_widening = widening_phase initial_worklist_widening initial_table in
+      prerr_endline "After Widening:";
+      Table.print after_widening;
+      let initial_worklist_narrowing = Cfg.nodesof cfg in
+      let after_narrowing = narrowing_phase initial_worklist_narrowing after_widening in
+      prerr_endline "After Narrowing:";
+      Table.print after_narrowing;
+      after_narrowing
 
 let inspect : Cfg.t -> Table.t -> bool 
-=fun _ _ -> true 
-
+=fun _ _ -> true
+    
 let analyze : Cfg.t -> bool 
 =fun cfg -> 
-  cfg 
-  |> fixpoint  
-  |> inspect cfg 
+  try
+    cfg 
+    |> fixpoint  
+    |> inspect cfg 
+  with
+    | DivByZero -> 
+      prerr_endline "Warning: Division by zero detected";
+      false
+    | OutOfBounds -> 
+      prerr_endline "Warning: Array access out of bounds";
+      false
+    | TypeMismatch -> 
+      prerr_endline "Warning: Type mismatch detected";
+      false
+    | InfiniteLoop -> 
+      prerr_endline "Warning: Infinite loop detected";
+      false
+    | _ -> 
+      prerr_endline "Warning: Unknown error occurred";
+      false
