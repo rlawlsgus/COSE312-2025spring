@@ -1,14 +1,10 @@
 {
- int i;
- int[10] a;
- while (1==1) {
- int j;
- read(j);
- if (0 <= j) {
- if (j < 10) {
- a[j] = i;
- }
- }
- i++;
- }
+    int x;
+    int y;
+    x = 1;
+    read(y);
+    if (x < y) {
+        print (1);
+    }
 }
+
