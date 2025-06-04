@@ -163,7 +163,68 @@ let run_reaching_definitions : program_map -> unit
 =fun _ -> ()
 
 let run_liveness_analysis : program_map -> unit
-=fun _ -> ()
+=fun pgm_map ->
+  let n = List.length pgm_map in
+  (* 1. def, use 집합 생성 *)
+  let def_use_list = List.map (fun info ->
+    let def, use =
+      match info.instr with
+      | T.ASSIGNV (x, _, y, z) -> [x], [y; z]
+      | T.ASSIGNC (x, _, y, _) -> [x], [y]
+      | T.ASSIGNU (x, _, y)    -> [x], [y]
+      | T.COPY (x, y)          -> [x], [y]
+      | T.COPYC (x, _)         -> [x], []
+      | T.LOAD (x, (a, i))     -> [x], [a; i]
+      | T.STORE ((a, i), x)    -> [], [a; i; x]
+      | T.READ x               -> [x], []
+      | T.WRITE x              -> [], [x]
+      | T.CJUMP (x, _)         -> [], [x]
+      | T.CJUMPF (x, _)        -> [], [x]
+      | _                      -> [], []
+    in
+    (def, use)
+  ) pgm_map in
+
+  (* 2. in, out 집합 초기화 *)
+  let in_sets  = Array.make n BatSet.empty in
+  let out_sets = Array.make n BatSet.empty in
+
+  (* 3. succ 계산: 각 인스트럭션의 다음 인덱스(분기 포함) *)
+  let succ = Array.init n (fun i ->
+    let info = List.nth pgm_map i in
+    match info.instr with
+    | T.UJUMP l ->
+      let l_instr = List.find (fun info' -> info'.label = l) pgm_map in
+      let idx_l = l_instr.idx in
+      [idx_l]
+    | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
+      let l_instr = List.find (fun info' -> info'.label = l) pgm_map in
+      let idx_l = l_instr.idx in
+      if i + 1 < n then [idx_l; i + 1] else [idx_l]
+    | T.HALT -> []
+    | _ -> if i + 1 < n then [i + 1] else []
+  ) in
+
+  (* 4. 고정점 반복 *)
+  let changed = ref true in
+  while !changed do
+    changed := false;
+    for i = n - 1 downto 0 do
+      let old_in  = in_sets.(i) in
+      let old_out = out_sets.(i) in
+      let def, use = List.nth def_use_list i in
+      let out_i = List.fold_left (fun acc s -> BatSet.union acc in_sets.(s)) BatSet.empty succ.(i) in
+      let in_i  = BatSet.union (BatSet.of_list use)
+                    (BatSet.diff out_i (BatSet.of_list def)) in
+      if not (BatSet.equal in_i old_in) || not (BatSet.equal out_i old_out) then
+        changed := true;
+      in_sets.(i)  <- in_i;
+      out_sets.(i) <- out_i;
+    done
+  done;
+
+  (* 결과 출력 등은 필요에 따라 추가 *)
+  ()
 
 let run_available_expressions : program_map -> unit
 =fun _ -> ()
