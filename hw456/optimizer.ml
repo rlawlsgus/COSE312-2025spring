@@ -11,13 +11,13 @@ type instr_info = {
   label: int;
   def_id: int;
   instr: T.instr;
-  use: T.var list;  (* 사용되는 변수들 *)
-  def: T.var list;  (* 정의되는 변수들 *)
+  use: T.var list;
+  def: T.var list;
 }
 
 type liveness_info = {
-  in_set: T.var BatSet.t;  (* live-in 집합 *)
-  out_set: T.var BatSet.t;  (* live-out 집합 *)
+  in_set: T.var BatSet.t;
+  out_set: T.var BatSet.t;
 }
 
 type program_map = instr_info list
@@ -33,11 +33,25 @@ type const_table = (T.var, const_value) BatMap.t
 type table_map = (int, const_table) BatMap.t
 
 type analysis_result = {
-  (* reaching_defs: unit;  (* 임시로 unit 타입 사용 *) *)
-  liveness: liveness_map;  (* liveness analysis 결과 *)
-  (* available_expressions: unit;  (* 임시로 unit 타입 사용 *) *)
-  constant_propagation: table_map;  (* 각 라벨별 상수 테이블 *)
+  reaching_defs: (int, int BatSet.t) BatMap.t;
+  liveness: liveness_map;
+  constant_propagation: table_map;
 }
+
+let remove_skips : T.program -> T.program
+=fun pgm ->
+  let rec aux acc = function
+    | [] -> List.rev acc
+    | (label, T.SKIP)::rest ->
+      (match label, rest with
+      | 0, _ -> aux acc rest
+      | l, (0, instr2)::rest2 -> aux acc ((l, instr2)::rest2)
+      | l, (l2, instr2)::rest2 -> aux ((l, T.SKIP)::acc) ((l2, instr2)::rest2)
+      | _ -> aux acc rest
+      )
+    | hd::rest -> aux (hd::acc) rest
+  in
+  aux [] pgm
 
 let initial_setting : T.program -> program_map
 =fun pgm ->
@@ -58,6 +72,26 @@ let initial_setting : T.program -> program_map
     in
     {idx = new_idx(); label; def_id; instr; use; def}
   ) pgm
+
+let repair_use_def_chains : program_map -> analysis_result -> program_map
+=fun pgm_map _ ->
+  List.map (fun info ->
+    let use, def =
+      match info.instr with
+      | T.ASSIGNV (x, _, y, z) -> ([y; z], [x])
+      | T.ASSIGNC (x, _, y, _) -> ([y], [x])
+      | T.ASSIGNU (x, _, y) -> ([y], [x])
+      | T.COPY (x, y) -> ([y], [x])
+      | T.COPYC (x, _) -> ([], [x])
+      | T.LOAD (x, (a, i)) -> ([a; i], [x])
+      | T.STORE ((a, i), x) -> ([a; i; x], [])
+      | T.READ x -> ([], [x])
+      | T.WRITE x -> ([x], [])
+      | T.CJUMP (x, _) | T.CJUMPF (x, _) -> ([x], [])
+      | _ -> ([], [])
+    in
+    {info with use; def}
+  ) pgm_map
 
 let print_pgm_map : program_map -> unit
 =fun pgm_map ->
@@ -153,7 +187,6 @@ let join_tables : const_table -> const_table -> const_table
 
 let rec run_constant_propagation : program_map -> int -> const_table -> table_map -> table_map
 =fun pgm_map current_idx table table_map ->
-  Printf.printf "%d " current_idx;
   if current_idx >= List.length pgm_map then
     table_map
   else
@@ -167,33 +200,68 @@ let rec run_constant_propagation : program_map -> int -> const_table -> table_ma
       | _ -> table
     in
     let process_next table_to_use =
-      let new_table_map = BatMap.add current_idx table_to_use table_map in
-      match current_info.instr with
-      | T.HALT -> new_table_map
-      | T.UJUMP l -> 
-        let target_info = List.find (fun info -> info.label = l) pgm_map in
-        run_constant_propagation pgm_map target_info.idx table_to_use new_table_map
-      | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
-        let target_info = List.find (fun info -> info.label = l) pgm_map in
-        let branch1_map = run_constant_propagation pgm_map target_info.idx table_to_use new_table_map in
-        run_constant_propagation pgm_map (current_idx + 1) table_to_use branch1_map
-      | _ -> run_constant_propagation pgm_map (current_idx + 1) table_to_use new_table_map
+      let prev_table = BatMap.find_opt current_idx table_map in
+      let joined_table =
+        match prev_table with
+        | Some prev -> join_tables table_to_use prev
+        | None -> table_to_use
+      in
+      let new_table_map = BatMap.add current_idx joined_table table_map in
+      if prev_table <> None && BatMap.equal (=) (Option.get prev_table) joined_table then
+        table_map
+      else
+        match current_info.instr with
+        | T.HALT -> new_table_map
+        | T.UJUMP l -> 
+          let target_info = List.find (fun info -> info.label = l) pgm_map in
+          run_constant_propagation pgm_map target_info.idx joined_table new_table_map
+        | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
+          let target_info = List.find (fun info -> info.label = l) pgm_map in
+          let branch1_map = run_constant_propagation pgm_map target_info.idx joined_table new_table_map in
+          run_constant_propagation pgm_map (current_idx + 1) joined_table branch1_map
+        | _ -> run_constant_propagation pgm_map (current_idx + 1) joined_table new_table_map
     in
-    if current_info.label != 0 then
-      try
-        let prev_table = BatMap.find current_idx table_map in
-        let joined_table = join_tables table prev_table in
-        if BatMap.equal (=) prev_table joined_table then
-          table_map  (* 고정점에 도달했으므로 현재 맵을 반환 *)
-        else
-          process_next joined_table
-      with Not_found -> 
-        process_next new_table
-    else
-      process_next new_table
+    process_next new_table
 
-(* let run_reaching_definitions : program_map -> unit
-=fun _ -> () *)
+let run_reaching_definitions : program_map -> (int, int BatSet.t) BatMap.t =
+  fun pgm_map ->
+    let n = List.length pgm_map in
+    let label_to_pos = List.mapi (fun i info -> (info.label, i)) pgm_map |> List.to_seq |> Hashtbl.of_seq in
+    let rda_in = Array.make n BatSet.empty in
+
+    let rec propagate_from idx x def_id visited =
+      if idx >= n then ()
+      else if Hashtbl.mem visited idx then ()
+      else begin
+        Hashtbl.add visited idx true;
+        let info = List.nth pgm_map idx in
+        rda_in.(idx) <- BatSet.add def_id rda_in.(idx);
+        if List.mem x info.def then ()
+        else begin
+          match info.instr with
+          | T.HALT -> ()
+          | T.UJUMP l ->
+            (match Hashtbl.find_opt label_to_pos l with Some next_idx -> propagate_from next_idx x def_id visited | None -> ())
+          | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
+            let nexts = [
+              (match Hashtbl.find_opt label_to_pos l with Some idx -> Some idx | None -> None);
+              if idx + 1 < n then Some (idx + 1) else None
+            ] |> List.filter_map (fun x -> x) in
+            List.iter (fun next_idx -> propagate_from next_idx x def_id visited) nexts
+          | _ ->
+            if idx + 1 < n then propagate_from (idx + 1) x def_id visited
+        end
+      end
+    in
+    List.iteri (fun i info ->
+      match info.def, info.def_id with
+      | [x], def_id when def_id <> 0 ->
+        let visited = Hashtbl.create 16 in
+        propagate_from (i + 1) x def_id visited
+      | _ -> ()
+    ) pgm_map;
+    List.mapi (fun i info -> (info.idx, rda_in.(i))) pgm_map
+    |> List.to_seq |> BatMap.of_seq
 
 let find_index : ('a -> bool) -> 'a list -> int option
 =fun pred lst ->
@@ -243,17 +311,13 @@ let run_liveness_analysis : program_map -> liveness_map
   let initial_liveness = List.map (fun _ -> {in_set = BatSet.empty; out_set = BatSet.empty}) pgm_map in
   fixpoint initial_liveness
 
-(* let run_available_expressions : program_map -> unit
-=fun _ -> () *)
-
 let run_all_analyses : program_map -> analysis_result
 =fun pgm_map ->
   let initial_table = BatMap.empty in
   let initial_table_map = BatMap.empty in
   {
-    (* reaching_defs = run_reaching_definitions pgm_map; *)
+    reaching_defs = run_reaching_definitions pgm_map;
     liveness = run_liveness_analysis pgm_map;
-    (* available_expressions = run_available_expressions pgm_map; *)
     constant_propagation = run_constant_propagation pgm_map 1 initial_table initial_table_map
   }
 
@@ -279,6 +343,12 @@ let print_liveness_map : program_map -> liveness_map -> unit
       (String.concat ", " (BatSet.to_list liveness.out_set))
   ) pgm_map liveness_map
 
+  let print_reaching_defs : (int, int BatSet.t) BatMap.t -> unit
+  =fun reaching_defs ->
+    BatMap.iter (fun idx defs ->
+      Printf.printf "Instruction %d: Defs: %s\n" idx (String.concat ", " (List.map string_of_int (BatSet.to_list defs)))
+    ) reaching_defs
+
 let print_analysis_results : program_map -> analysis_result -> unit
 =fun pgm_map analyses ->
   print_endline "\n=== Analysis Results ===";
@@ -289,6 +359,8 @@ let print_analysis_results : program_map -> analysis_result -> unit
   ) analyses.constant_propagation;
   print_endline "\nLiveness:";
   print_liveness_map pgm_map analyses.liveness;
+  print_endline "\nReaching Definitions:";
+  print_reaching_defs analyses.reaching_defs;
   print_endline "\n=====================\n"
 
 let apply_constant_folding : program_map -> analysis_result -> program_map
@@ -378,12 +450,161 @@ let apply_constant_folding : program_map -> analysis_result -> program_map
   ) pgm_map
 
 let apply_common_subexpression_elimination : program_map -> analysis_result -> program_map
-=fun pgm_map _ ->
-  pgm_map
+=fun pgm_map analyses ->
+  let n = List.length pgm_map in
+  let rda = analyses.reaching_defs in
+  let label_to_pos = List.mapi (fun i info -> (info.label, i)) pgm_map |> List.to_seq |> Hashtbl.of_seq in
+  let pgm_map_arr = Array.of_list pgm_map in
+
+  let expr_of_instr = function
+    | T.ASSIGNV (_, op, y, z) -> Some (`Bop (op, y, z))
+    | T.ASSIGNC (_, op, y, n) -> Some (`Bopc (op, y, n))
+    | T.ASSIGNU (_, op, y)    -> Some (`Uop (op, y))
+    | _ -> None
+  in
+
+  let vars_of_expr = function
+    | `Bop (_, y, z) -> [y; z]
+    | `Bopc (_, y, _) -> [y]
+    | `Uop (_, y) -> [y]
+  in
+
+  let rec propagate_from idx x expr visited =
+    if idx >= n then ()
+    else if Hashtbl.mem visited idx then ()
+    else begin
+      Hashtbl.add visited idx true;
+      let info = pgm_map_arr.(idx) in
+      let all_vars = x :: vars_of_expr expr in
+      if List.exists (fun v -> List.mem v info.def) all_vars then ()
+      else begin
+        match expr_of_instr info.instr, info.def with
+        | Some expr2, [y] when expr2 = expr && x <> y ->
+          let rda_in = try BatMap.find info.idx rda with Not_found -> BatSet.empty in
+          let safe =
+            List.for_all (fun v ->
+              let v_def_ids =
+                BatSet.filter (fun did ->
+                  let def_info = List.find (fun info -> info.def_id = did) pgm_map in
+                  List.mem v def_info.def
+                ) rda_in
+              in
+              BatSet.cardinal v_def_ids = 1
+            ) all_vars
+          in
+          if safe then pgm_map_arr.(idx) <- {info with instr = T.COPY (y, x)}
+        | _ -> ()
+      end;
+      match info.instr with
+      | T.HALT -> ()
+      | T.UJUMP l ->
+        (match Hashtbl.find_opt label_to_pos l with Some next_idx -> propagate_from next_idx x expr visited | None -> ())
+      | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
+        let nexts = [
+          (match Hashtbl.find_opt label_to_pos l with Some idx -> Some idx | None -> None);
+          if idx + 1 < n then Some (idx + 1) else None
+        ] |> List.filter_map (fun x -> x) in
+        List.iter (fun next_idx -> propagate_from next_idx x expr visited) nexts
+      | _ ->
+        if idx + 1 < n then propagate_from (idx + 1) x expr visited
+    end
+  in
+
+  for i = 0 to n - 1 do
+    let info = pgm_map_arr.(i) in
+    match expr_of_instr info.instr, info.def with
+    | Some expr, [x] ->
+      let visited = Hashtbl.create 16 in
+      propagate_from (i + 1) x expr visited
+    | _ -> ()
+  done;
+  Array.to_list pgm_map_arr
 
 let apply_copy_propagation : program_map -> analysis_result -> program_map
-=fun pgm_map _ ->
-  pgm_map
+=fun pgm_map analyses ->
+  let n = List.length pgm_map in
+  let label_to_pos = List.mapi (fun i info -> (info.label, i)) pgm_map |> List.to_seq |> Hashtbl.of_seq in
+  let pgm_map_arr = Array.of_list pgm_map in
+  let rda = analyses.reaching_defs in
+
+  let rec propagate_from idx x y def_id visited =
+    if idx >= n then ()
+    else if Hashtbl.mem visited (idx, x) then ()
+    else begin
+      Hashtbl.add visited (idx, x) true;
+      let info = pgm_map_arr.(idx) in
+      if List.mem x info.def then ()
+      else begin
+        if List.mem x info.use then begin
+          let rda_in = try BatMap.find info.idx rda with Not_found -> BatSet.empty in
+          let x_def_ids =
+            BatSet.filter (fun did ->
+              let def_info = List.find (fun info -> info.def_id = did) pgm_map in
+              List.mem x def_info.def
+            ) rda_in
+          in
+          if BatSet.cardinal x_def_ids = 1 && BatSet.mem def_id x_def_ids then begin
+            let new_instr =
+              match info.instr with
+              | T.ASSIGNV (z, op, a, b) ->
+                let a' = if a = x then y else a in
+                let b' = if b = x then y else b in
+                T.ASSIGNV (z, op, a', b')
+              | T.ASSIGNC (z, op, a, n) ->
+                let a' = if a = x then y else a in
+                T.ASSIGNC (z, op, a', n)
+              | T.ASSIGNU (z, op, a) ->
+                let a' = if a = x then y else a in
+                T.ASSIGNU (z, op, a')
+              | T.COPY (z, a) ->
+                let a' = if a = x then y else a in
+                T.COPY (z, a')
+              | T.LOAD (z, (a, b)) ->
+                let a' = if a = x then y else a in
+                let b' = if b = x then y else b in
+                T.LOAD (z, (a', b'))
+              | T.STORE ((a, b), c) ->
+                let a' = if a = x then y else a in
+                let b' = if b = x then y else b in
+                let c' = if c = x then y else c in
+                T.STORE ((a', b'), c')
+              | T.CJUMP (a, l) ->
+                let a' = if a = x then y else a in
+                T.CJUMP (a', l)
+              | T.CJUMPF (a, l) ->
+                let a' = if a = x then y else a in
+                T.CJUMPF (a', l)
+              | T.WRITE a ->
+                let a' = if a = x then y else a in
+                T.WRITE a'
+              | _ -> info.instr
+            in
+            pgm_map_arr.(idx) <- {info with instr = new_instr}
+          end
+        end;
+        match info.instr with
+        | T.HALT -> ()
+        | T.UJUMP l ->
+          (match Hashtbl.find_opt label_to_pos l with Some next_idx -> propagate_from next_idx x y def_id visited | None -> ())
+        | T.CJUMP (_, l) | T.CJUMPF (_, l) ->
+          let nexts = [
+            (match Hashtbl.find_opt label_to_pos l with Some idx -> Some idx | None -> None);
+            if idx + 1 < n then Some (idx + 1) else None
+          ] |> List.filter_map (fun x -> x) in
+          List.iter (fun next_idx -> propagate_from next_idx x y def_id visited) nexts
+        | _ ->
+          if idx + 1 < n then propagate_from (idx + 1) x y def_id visited
+      end
+    end
+  in
+  for i = 0 to n - 1 do
+    match pgm_map_arr.(i).instr, pgm_map_arr.(i).def with
+    | T.COPY (x, y), [x'] when x = x' && pgm_map_arr.(i).def_id <> 0 ->
+      let visited = Hashtbl.create 16 in
+      propagate_from (i + 1) x y pgm_map_arr.(i).def_id visited
+    | _ -> ()
+  done;
+  Array.to_list pgm_map_arr
 
 let apply_dead_code_elimination : program_map -> analysis_result -> program
 =fun pgm_map analyses ->
@@ -412,9 +633,10 @@ let apply_dead_code_elimination : program_map -> analysis_result -> program
 let apply_all_optims : program_map -> analysis_result -> program
 =fun pgm_map analyses ->
   let opt_pgm_map = apply_constant_folding pgm_map analyses in
-  print_pgm_map opt_pgm_map;
-  let opt_pgm_map = apply_common_subexpression_elimination opt_pgm_map analyses in
+  let opt_pgm_map = repair_use_def_chains opt_pgm_map analyses in
   let opt_pgm_map = apply_copy_propagation opt_pgm_map analyses in
+  let opt_pgm_map = repair_use_def_chains opt_pgm_map analyses in
+  let opt_pgm_map = apply_common_subexpression_elimination opt_pgm_map analyses in
   let opt_pgm = apply_dead_code_elimination opt_pgm_map analyses in
   opt_pgm
 
@@ -424,18 +646,11 @@ let optimize : program -> program
     idx := 0;
     didx := 0;
     let pgm_map = initial_setting current_pgm in
-    (* print_pgm_map pgm_map; *)
     let analyses = run_all_analyses pgm_map in
-    (* print_analysis_results pgm_map analyses;  (* 분석 결과 출력 *) *)
     let optimized_pgm = apply_all_optims pgm_map analyses in
-
-    (* T.pp optimized_pgm; *)
-
     if Hashtbl.hash optimized_pgm = Hashtbl.hash prev_pgm then
-      (T.pp pgm; optimized_pgm)
+      remove_skips optimized_pgm
     else
       loop optimized_pgm current_pgm
   in
-  (* let _ = loop pgm [] in
-  pgm *)
   loop pgm []
