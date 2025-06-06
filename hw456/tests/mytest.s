@@ -1,10 +1,14 @@
 {
     int x;
     int y;
-    x = 1;
-    read(y);
-    if (x < y) {
-        print (1);
-    }
+    int z;
+    int a;
+    int b;
+    read(x);
+    y = x + 3;
+    z = x + 3;
+    a = x + 3;
+    b = y + z + a;
+    print(b);
 }
 
