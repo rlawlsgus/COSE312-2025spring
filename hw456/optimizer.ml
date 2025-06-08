@@ -619,7 +619,7 @@ let apply_dead_code_elimination : program_map -> analysis_result -> program
       let is_dead = 
         match info.instr with
         | T.ASSIGNV (x, _, _, _) | T.ASSIGNC (x, _, _, _) | T.ASSIGNU (x, _, _) |
-          T.COPY (x, _) | T.COPYC (x, _) | T.LOAD (x, _) | T.READ x ->
+          T.COPY (x, _) | T.COPYC (x, _) | T.LOAD (x, _) ->
           not (BatSet.mem x liveness.out_set)
         | _ -> false
       in
